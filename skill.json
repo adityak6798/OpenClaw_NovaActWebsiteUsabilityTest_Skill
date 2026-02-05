@@ -1,6 +1,6 @@
 {
   "name": "nova-act-usability",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "AI-orchestrated usability testing using Amazon Nova Act browser automation",
   "author": "Adi",
   "repository": "https://github.com/YOUR_USERNAME/openclaw-skill-nova-act-usability",

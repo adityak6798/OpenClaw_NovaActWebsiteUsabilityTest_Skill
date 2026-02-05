@@ -13,8 +13,10 @@ AI-orchestrated usability testing for websites using Amazon Nova Act browser aut
 ## Features
 
 ✅ **Real Browser Automation** - Actual Playwright browser control via Nova Act  
+✅ **Fully Dynamic Testing** - Exploration strategies and prompts generated per website/persona (no hardcoded logic!)  
 ✅ **Smart Persona Generation** - Analyzes page content to create relevant user types  
 ✅ **Adaptive Testing** - AI tries multiple variations when element text doesn't match exactly  
+✅ **Robust Error Handling** - Handles scroll loops, timeouts, and Nova Act failures gracefully  
 ✅ **Detailed Reporting** - Professional HTML reports with step-by-step observations  
 ✅ **Trace File Integration** - Links to Nova Act's HTML session recordings for replay  
 
@@ -84,8 +86,19 @@ The agent will:
 1. **Page Analysis**: Captures title, navigation, key elements
 2. **Persona Generation**: Creates 3 contextual user types based on page content
 3. **Test Case Creation**: Generates top 3 realistic tasks per persona
-4. **Adaptive Execution**: Tries multiple prompt variations (Nova Act uses exact text matching)
-5. **Report Generation**: Auto-creates comprehensive HTML report with trace links
+4. **Dynamic Exploration**: AI generates exploration strategy (what questions to ask, what actions to take) - fully contextual, no hardcoded prompts!
+5. **Adaptive Execution**: Tries multiple prompt variations when first approach fails
+6. **Robust Error Handling**: Detects scroll loops, handles timeouts, continues testing even if steps fail
+7. **Report Generation**: Auto-creates comprehensive HTML report with trace links
+
+### Why "Dynamic"?
+
+Unlike traditional testing tools with hardcoded scenarios, this skill **generates the test strategy at runtime**:
+
+- **Hardcoded approach** (old way): `if test_case == "find docs": ask "Do you see Documentation?"`
+- **Dynamic approach** (this skill): AI analyzes the test case + persona + page context → generates contextual exploration steps with fallback strategies
+
+This means the skill adapts to ANY website without requiring updates to hardcoded logic!
 
 ## Nova Act Quirks
 
