@@ -36,51 +36,53 @@ Users can trigger this skill by saying:
 
 When a user asks for usability testing:
 
-```python
-# 1. Run the adaptive test script
-cd /home/adity/.openclaw/workspace
+```bash
+# Find the skill directory (auto-installed by OpenClaw)
+SKILL_DIR=$(python3 -c "import os; print(os.path.join(os.path.expanduser('~'), '.openclaw', 'skills', 'nova-act-usability'))")
+
+# Or if manually installed to current workspace:
+SKILL_DIR="./nova-act-usability"
+
+# Run the adaptive test script (works from any directory)
 export NOVA_ACT_SKIP_PLAYWRIGHT_INSTALL=1
-python3.14 run_adaptive_test.py
+python3 "$SKILL_DIR/scripts/run_adaptive_test.py" "https://example.com"
 
 # This will:
-# - Analyze the target page
-# - Generate contextual personas  
-# - Create realistic test cases
-# - Execute iterative Nova Act tests
-# - Capture trace files
-# - Auto-generate HTML report
-# - Print viewing instructions
+# - Create nova_act_logs/ in current directory
+# - Create test_results_adaptive.json in current directory
+# - Create nova_act_usability_report.html in current directory
 ```
 
 The script handles everything automatically. You just need to:
 1. Extract the website URL from the user's request
-2. Update `WEBSITE_URL` in the script (or pass as argument)
-3. Run the script
-4. Share the report viewing instructions with the user
+2. Run the script with the URL as argument
+3. Share the report viewing instructions with the user
 
 ## Quick Start
 
 **When user requests usability testing:**
 
 ```python
-# 1. Update the target URL in run_adaptive_test.py
-# Edit: WEBSITE_URL = "https://example.com"
+import subprocess
+import os
 
-# 2. Run the adaptive test
-exec_command = """
-cd /home/adity/.openclaw/workspace && \
-export NOVA_ACT_SKIP_PLAYWRIGHT_INSTALL=1 && \
-python3.14 run_adaptive_test.py 2>&1
-"""
+# Get skill directory
+skill_dir = os.path.expanduser("~/.openclaw/skills/nova-act-usability")
+if not os.path.exists(skill_dir):
+    # Try workspace location
+    skill_dir = os.path.join(os.getcwd(), "nova-act-usability")
 
-# 3. The script will:
-# - Analyze the page
-# - Generate personas
-# - Run 9 adaptive tests (3 personas × 3 tasks)
-# - Auto-generate HTML report
-# - Print viewing instructions
+script_path = os.path.join(skill_dir, "scripts", "run_adaptive_test.py")
 
-# 4. Share the viewing instructions with user
+# Run test
+result = subprocess.run(
+    ["python3", script_path, "https://example.com"],
+    env={**os.environ, "NOVA_ACT_SKIP_PLAYWRIGHT_INSTALL": "1"},
+    capture_output=True,
+    text=True
+)
+
+print(result.stdout)
 ```
 
 ## Detailed Workflow (Internal)
@@ -180,7 +182,7 @@ with nova_session(website_url) as nova:
     })
 ```
 
-### Step 4: Pool and Analyze Results
+### Step 5: Pool and Analyze Results
 
 After all tests:
 1. Identify common friction points across personas
@@ -188,23 +190,23 @@ After all tests:
 3. Flag efficiency problems (too many steps)
 4. Document task failures (major UX issues)
 
-### Step 5: Generate Report
+### Step 6: Generate Report
 
 ```python
 import json
-from scripts.generate_report import generate_html_report
+from scripts.enhanced_report_generator import generate_enhanced_report
 
 # Save results
-with open("test_results.json", "w") as f:
+with open("test_results_adaptive.json", "w") as f:
     json.dump(results, f, indent=2)
 
 # Generate HTML report
-generate_html_report(
-    results=results,
-    analysis=analyze_results(results),
-    template_path="assets/report-template.html",
-    output_path="usability_report.html"
+report_path = generate_enhanced_report(
+    page_analysis=page_analysis,
+    results=test_results
 )
+
+print(f"Report: {report_path}")
 ```
 
 ## Key Principles
@@ -272,13 +274,13 @@ Template personas with detailed profiles:
 ### `scripts/nova_session.py`
 Thin wrapper providing Nova Act session primitive:
 ```python
-with nova_session(url, headless=True) as nova:
+with nova_session(url, headless=True, logs_dir="./logs") as nova:
     nova.act("action")
     result = nova.act_get("query", schema=Schema)
 ```
 
-### `scripts/generate_report.py`
-Compiles observations into HTML usability report.
+### `scripts/enhanced_report_generator.py`
+Compiles observations into HTML usability report with trace file links.
 
 ### `assets/report-template.html`
 Professional HTML template for usability reports.
@@ -299,6 +301,7 @@ API key stored in `~/.openclaw/config/nova-act.json`:
 
 ```bash
 pip install nova-act
+playwright install chromium
 ```
 
 ## Example: AI-Orchestrated Test
@@ -324,3 +327,38 @@ pip install nova-act
 7. Generate HTML report with findings and recommendations
 
 **The AI decides every step.** The skill just provides tools and guidance.
+
+## File Structure
+
+```
+nova-act-usability/
+├── SKILL.md                          # This file
+├── README.md                         # User documentation
+├── skill.json                        # Skill manifest
+├── scripts/
+│   ├── run_adaptive_test.py          # Main orchestrator (accepts URL arg)
+│   ├── nova_session.py               # Session wrapper
+│   ├── enhanced_report_generator.py  # HTML report generator
+│   └── trace_finder.py               # Extract trace file paths
+├── references/
+│   ├── nova-act-cookbook.md          # Best practices
+│   └── persona-examples.md           # Template personas
+└── assets/
+    └── report-template.html          # HTML template
+
+```
+
+## Output Files (Created in Working Directory)
+
+When you run a test, these files are created in your current working directory:
+
+```
+./
+├── nova_act_logs/                    # Nova Act trace files
+│   ├── act_<id>_output.html         # Session recordings
+│   └── ...
+├── test_results_adaptive.json        # Raw test results
+└── nova_act_usability_report.html   # Final report
+```
+
+All paths are relative - works from any installation location!

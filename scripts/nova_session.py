@@ -51,9 +51,9 @@ def nova_session(starting_page: str, headless: bool = True, logs_dir: Optional[s
     config = load_config()
     os.environ['NOVA_ACT_API_KEY'] = config['apiKey']
     
-    # Set up logs directory
+    # Set up logs directory (default to current working directory)
     if logs_dir is None:
-        logs_dir = "/home/adity/.openclaw/workspace/nova_act_logs"
+        logs_dir = os.path.join(os.getcwd(), "nova_act_logs")
     
     # Create logs directory if it doesn't exist
     os.makedirs(logs_dir, exist_ok=True)

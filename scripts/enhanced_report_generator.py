@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.14
+#!/usr/bin/env python3
 """
 Enhanced HTML report generator with detailed explanations and trace links.
 """
@@ -436,10 +436,12 @@ def generate_enhanced_report(page_analysis: Dict, results: List[Dict]) -> str:
                     <div style="margin-top: 10px;">
                 """
                 for i, trace_file in enumerate(trace_files, 1):
-                    # Make path relative to report location (both in workspace)
-                    # Report: /home/adity/.openclaw/workspace/nova_act_usability_report.html
-                    # Traces: /home/adity/.openclaw/workspace/nova_act_logs/...
-                    relative_path = trace_file.replace('/home/adity/.openclaw/workspace/', '')
+                    # Make path relative to current working directory
+                    try:
+                        relative_path = os.path.relpath(trace_file, os.getcwd())
+                    except ValueError:
+                        # If on different drives (Windows), use absolute path
+                        relative_path = trace_file
                     
                     html += f"""
                         <div style="margin: 5px 0;">
@@ -502,8 +504,8 @@ def generate_enhanced_report(page_analysis: Dict, results: List[Dict]) -> str:
 </html>
 """
     
-    # Write report
-    report_path = "/home/adity/.openclaw/workspace/nova_act_usability_report.html"
+    # Write report to current working directory
+    report_path = os.path.join(os.getcwd(), "nova_act_usability_report.html")
     with open(report_path, 'w') as f:
         f.write(html)
     

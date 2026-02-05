@@ -27,11 +27,15 @@ AI-orchestrated usability testing for websites using Amazon Nova Act browser aut
 ## Installation
 
 ```bash
-# Install via OpenClaw CLI
+# Option 1: Install via OpenClaw CLI (recommended)
 openclaw skill install nova-act-usability
 
-# Or manually extract to skills directory
+# Option 2: Manual installation to OpenClaw skills directory
+mkdir -p ~/.openclaw/skills
 tar -xzf nova-act-usability.tar.gz -C ~/.openclaw/skills/
+
+# Option 3: Extract to current workspace
+tar -xzf nova-act-usability.tar.gz
 ```
 
 ## Configuration

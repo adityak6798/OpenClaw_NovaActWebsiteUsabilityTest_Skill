@@ -1,25 +1,32 @@
-#!/usr/bin/env python3.14
+#!/usr/bin/env python3
 """
 Adaptive AI-orchestrated usability testing.
 Explores the page, generates contextual personas, and iteratively tests.
 """
 
 import sys
+import os
 import time
 import json
 from datetime import datetime
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
-sys.path.insert(0, '/home/adity/.openclaw/workspace/nova-act-usability/scripts')
-sys.path.insert(0, '/home/adity/.openclaw/workspace')
+# Dynamic path resolution - works from any installation location
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SKILL_DIR = os.path.dirname(SCRIPT_DIR)
+WORKSPACE_DIR = os.getcwd()
+
+# Add skill scripts to path
+sys.path.insert(0, SCRIPT_DIR)
+
 from nova_session import nova_session
 from enhanced_report_generator import generate_enhanced_report
 from trace_finder import get_session_traces
 
-WEBSITE_URL = "https://nova.amazon.com/act"  # Correct URL for Nova Act
-RESULTS_FILE = "/home/adity/.openclaw/workspace/test_results_adaptive.json"
-LOGS_DIR = "/home/adity/.openclaw/workspace/nova_act_logs"
+WEBSITE_URL = "https://nova.amazon.com/act"  # Default - override via argument or edit
+RESULTS_FILE = os.path.join(WORKSPACE_DIR, "test_results_adaptive.json")
+LOGS_DIR = os.path.join(WORKSPACE_DIR, "nova_act_logs")
 
 # Pydantic schemas for structured extraction
 class NavigationLinks(BaseModel):
@@ -40,7 +47,7 @@ def analyze_page(url: str) -> Dict:
     
     analysis = {}
     
-    with nova_session(url, headless=True) as nova:
+    with nova_session(url, headless=True, logs_dir=LOGS_DIR) as nova:
         # Get basic page info
         print("→ Reading page title and main heading...")
         title = nova.act_get(
@@ -197,10 +204,6 @@ def iterative_test(persona: Dict, test_case: str, page_analysis: Dict) -> Dict:
     
     try:
         from nova_act import BOOL_SCHEMA
-        
-        # Track session start time to find new trace files
-        import os
-        session_start = time.time()
         
         with nova_session(WEBSITE_URL, headless=True, logs_dir=LOGS_DIR) as nova:
             # Initial observation
@@ -458,8 +461,14 @@ def iterative_test(persona: Dict, test_case: str, page_analysis: Dict) -> Dict:
     }
 
 def main():
+    # Support URL as command line argument
+    global WEBSITE_URL
+    if len(sys.argv) > 1:
+        WEBSITE_URL = sys.argv[1]
+    
     print(f"\n🦅 ADAPTIVE NOVA ACT USABILITY TEST")
     print(f"Website: {WEBSITE_URL}")
+    print(f"Workspace: {WORKSPACE_DIR}")
     print(f"="*60)
     
     # Step 1: Analyze the page
@@ -513,9 +522,8 @@ def main():
     print(f"📄 HTML REPORT GENERATED")
     print(f"{'='*60}")
     print(f"\n🦅 Usability Report: {report_path}")
-    print(f"\nTo view:")
-    print(f"  1. From WSL:  explorer.exe {report_path}")
-    print(f"  2. Or navigate to: \\\\wsl$\\Ubuntu{report_path}")
+    print(f"\nView the report in your browser:")
+    print(f"  file://{report_path}")
     print(f"\n{'='*60}\n")
 
 if __name__ == "__main__":
