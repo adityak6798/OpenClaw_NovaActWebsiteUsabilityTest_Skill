@@ -23,6 +23,7 @@ sys.path.insert(0, SCRIPT_DIR)
 from nova_session import nova_session
 from enhanced_report_generator import generate_enhanced_report
 from trace_finder import get_session_traces
+from safe_nova_wrapper import safe_act, safe_act_get, safe_scroll, is_session_healthy
 
 WEBSITE_URL = "https://nova.amazon.com/act"  # Default - override via argument or edit
 RESULTS_FILE = os.path.join(WORKSPACE_DIR, "test_results_adaptive.json")
@@ -41,53 +42,86 @@ def analyze_page(url: str) -> Dict:
     """
     Step 1: Analyze the page to understand what it offers.
     Uses Nova Act + vision to understand the page before testing.
+    NOW WITH ROBUST ERROR HANDLING - gracefully handles Nova Act failures.
     """
     print(f"\n🔍 ANALYZING PAGE: {url}")
     print("="*60)
     
-    analysis = {}
+    analysis = {
+        'title': 'Unknown',
+        'navigation': [],
+        'purpose': 'Unknown purpose',
+        'key_elements': {'pricing': False, 'documentation': False, 'demo': False}
+    }
     
-    with nova_session(url, headless=True, logs_dir=LOGS_DIR) as nova:
-        # Get basic page info
-        print("→ Reading page title and main heading...")
-        title = nova.act_get(
-            "What is the main title or headline on this page?",
-            schema={"type": "object", "properties": {"title": {"type": "string"}}, "required": ["title"]}
-        )
-        analysis['title'] = title.parsed_response.get('title', 'Unknown')
-        print(f"  Title: {analysis['title']}")
-        
-        # Get navigation structure
-        print("→ Analyzing navigation...")
-        nav_links = nova.act_get(
-            "List all the navigation links you see at the top of the page (just the text of each link, separated by commas)",
-            schema={"type": "object", "properties": {"links": {"type": "string"}}, "required": ["links"]}
-        )
-        nav_text = nav_links.parsed_response.get('links', '')
-        analysis['navigation'] = [link.strip() for link in nav_text.split(',') if link.strip()]
-        print(f"  Navigation: {analysis['navigation']}")
-        
-        # Understand page purpose
-        print("→ Understanding page purpose...")
-        purpose = nova.act_get(
-            "In one sentence, what does this page help users do?",
-            schema={"type": "object", "properties": {"purpose": {"type": "string"}}, "required": ["purpose"]}
-        )
-        analysis['purpose'] = purpose.parsed_response.get('purpose', 'Unknown purpose')
-        print(f"  Purpose: {analysis['purpose']}")
-        
-        # Check for key elements
-        print("→ Checking for key elements...")
-        has_pricing = nova.act_get("Is there any mention of pricing, cost, or plans on this page?", schema={"type": "boolean"})
-        has_docs = nova.act_get("Is there any mention of documentation, API, or developer resources?", schema={"type": "boolean"})
-        has_demo = nova.act_get("Is there an interactive demo or playground on this page?", schema={"type": "boolean"})
-        
-        analysis['key_elements'] = {
-            'pricing': has_pricing.parsed_response,
-            'documentation': has_docs.parsed_response,
-            'demo': has_demo.parsed_response
-        }
-        print(f"  Key elements: {analysis['key_elements']}")
+    try:
+        with nova_session(url, headless=True, logs_dir=LOGS_DIR) as nova:
+            # Get basic page info
+            print("→ Reading page title and main heading...")
+            ok, response, error = safe_act_get(
+                nova,
+                "What is the main title or headline on this page?",
+                schema={"type": "object", "properties": {"title": {"type": "string"}}, "required": ["title"]},
+                timeout=20
+            )
+            if ok and response:
+                analysis['title'] = response.get('title', 'Unknown')
+                print(f"  Title: {analysis['title']}")
+            else:
+                print(f"  ⚠️ Could not extract title: {error}")
+            
+            # Get navigation structure
+            if is_session_healthy(nova):
+                print("→ Analyzing navigation...")
+                ok, response, error = safe_act_get(
+                    nova,
+                    "List all the navigation links you see at the top of the page (just the text of each link, separated by commas)",
+                    schema={"type": "object", "properties": {"links": {"type": "string"}}, "required": ["links"]},
+                    timeout=20
+                )
+                if ok and response:
+                    nav_text = response.get('links', '')
+                    analysis['navigation'] = [link.strip() for link in nav_text.split(',') if link.strip()]
+                    print(f"  Navigation: {analysis['navigation']}")
+                else:
+                    print(f"  ⚠️ Could not extract navigation: {error}")
+            
+            # Understand page purpose
+            if is_session_healthy(nova):
+                print("→ Understanding page purpose...")
+                ok, response, error = safe_act_get(
+                    nova,
+                    "In one sentence, what does this page help users do?",
+                    schema={"type": "object", "properties": {"purpose": {"type": "string"}}, "required": ["purpose"]},
+                    timeout=20
+                )
+                if ok and response:
+                    analysis['purpose'] = response.get('purpose', 'Unknown purpose')
+                    print(f"  Purpose: {analysis['purpose']}")
+                else:
+                    print(f"  ⚠️ Could not extract purpose: {error}")
+            
+            # Check for key elements
+            if is_session_healthy(nova):
+                print("→ Checking for key elements...")
+                from nova_act import BOOL_SCHEMA
+                
+                ok1, pricing, _ = safe_act_get(nova, "Is there any mention of pricing, cost, or plans on this page?", schema=BOOL_SCHEMA, timeout=15)
+                ok2, docs, _ = safe_act_get(nova, "Is there any mention of documentation, API, or developer resources?", schema=BOOL_SCHEMA, timeout=15)
+                ok3, demo, _ = safe_act_get(nova, "Is there an interactive demo or playground on this page?", schema=BOOL_SCHEMA, timeout=15)
+                
+                if ok1:
+                    analysis['key_elements']['pricing'] = pricing
+                if ok2:
+                    analysis['key_elements']['documentation'] = docs
+                if ok3:
+                    analysis['key_elements']['demo'] = demo
+                    
+                print(f"  Key elements: {analysis['key_elements']}")
+    
+    except Exception as e:
+        print(f"⚠️ Page analysis encountered error: {str(e)}")
+        print("   Continuing with default analysis...")
     
     return analysis
 
@@ -191,6 +225,7 @@ def iterative_test(persona: Dict, test_case: str, page_analysis: Dict) -> Dict:
     """
     Step 4: Iteratively test a hypothesis, adapting based on findings.
     Don't give up after one prompt - explore multiple approaches.
+    NOW WITH ROBUST ERROR HANDLING - handles scroll loops, timeouts, and Nova Act failures.
     """
     print(f"\n{'='*60}")
     print(f"PERSONA: {persona['name']} ({persona['archetype']})")
@@ -201,6 +236,7 @@ def iterative_test(persona: Dict, test_case: str, page_analysis: Dict) -> Dict:
     start_time = time.time()
     success = False
     trace_files = []  # Collect Nova Act trace file paths
+    session_failed = False
     
     try:
         from nova_act import BOOL_SCHEMA
@@ -215,19 +251,30 @@ def iterative_test(persona: Dict, test_case: str, page_analysis: Dict) -> Dict:
                 "timestamp": datetime.now().isoformat()
             })
             
-            # ITERATIVE EXPLORATION based on test case
+            # ITERATIVE EXPLORATION based on test case (NOW WITH ERROR HANDLING)
             
             if "documentation" in test_case.lower():
                 print("→ Exploring: Finding documentation...")
                 
                 # Approach 1: Check for exact match
                 print("  Attempt 1: Look for 'Documentation' link")
-                has_docs_exact = nova.act_get(
+                ok, response, error = safe_act_get(
+                    nova,
                     "Do you see a link with the exact word 'Documentation'?",
-                    schema=BOOL_SCHEMA
+                    schema=BOOL_SCHEMA,
+                    timeout=15
                 )
                 
-                if has_docs_exact.parsed_response:
+                if not ok:
+                    observations.append({
+                        "step": "find_docs_exact",
+                        "action": "Check for 'Documentation' link",
+                        "success": False,
+                        "notes": f"Nova Act error: {error}",
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    session_failed = True
+                elif response:
                     observations.append({
                         "step": "find_docs_exact",
                         "action": "Check for 'Documentation' link",
@@ -245,28 +292,48 @@ def iterative_test(persona: Dict, test_case: str, page_analysis: Dict) -> Dict:
                         "timestamp": datetime.now().isoformat()
                     })
                     
-                    # Approach 2: Try variations
-                    print("  Attempt 2: Try variations (Docs, API, etc.)")
-                    has_docs_variant = nova.act_get(
-                        "Do you see a link containing 'Docs' or 'API' or 'Developer' or 'Guide'?",
-                        schema=BOOL_SCHEMA
-                    )
-                    
-                    if has_docs_variant.parsed_response:
-                        observations.append({
-                            "step": "find_docs_variant",
-                            "action": "Check for documentation variations",
-                            "success": True,
-                            "notes": "Found documentation link with different wording",
-                            "timestamp": datetime.now().isoformat()
-                        })
-                        success = True
+                    # Approach 2: Try variations (only if session still healthy)
+                    if not session_failed and is_session_healthy(nova):
+                        print("  Attempt 2: Try variations (Docs, API, etc.)")
+                        ok2, response2, error2 = safe_act_get(
+                            nova,
+                            "Do you see a link containing 'Docs' or 'API' or 'Developer' or 'Guide'?",
+                            schema=BOOL_SCHEMA,
+                            timeout=15
+                        )
+                        
+                        if not ok2:
+                            observations.append({
+                                "step": "find_docs_variant",
+                                "action": "Check for documentation variations",
+                                "success": False,
+                                "notes": f"Nova Act error: {error2}",
+                                "timestamp": datetime.now().isoformat()
+                            })
+                            session_failed = True
+                        elif response2:
+                            observations.append({
+                                "step": "find_docs_variant",
+                                "action": "Check for documentation variations",
+                                "success": True,
+                                "notes": "Found documentation link with different wording",
+                                "timestamp": datetime.now().isoformat()
+                            })
+                            success = True
+                        else:
+                            observations.append({
+                                "step": "find_docs_variant",
+                                "action": "Check for documentation variations",
+                                "success": False,
+                                "notes": "UX ISSUE: No documentation links found with any common variation",
+                                "timestamp": datetime.now().isoformat()
+                            })
                     else:
                         observations.append({
                             "step": "find_docs_variant",
                             "action": "Check for documentation variations",
                             "success": False,
-                            "notes": "UX ISSUE: No documentation links found with any common variation",
+                            "notes": "Skipped - session unhealthy or previous error",
                             "timestamp": datetime.now().isoformat()
                         })
             
@@ -275,50 +342,84 @@ def iterative_test(persona: Dict, test_case: str, page_analysis: Dict) -> Dict:
                 
                 # Approach 1: Check for interactive element
                 print("  Attempt 1: Look for input/prompt box")
-                has_input = nova.act_get(
+                ok, response, error = safe_act_get(
+                    nova,
                     "Is there an input box, text field, or prompt where you can type?",
-                    schema=BOOL_SCHEMA
+                    schema=BOOL_SCHEMA,
+                    timeout=15
                 )
                 
-                observations.append({
-                    "step": "find_interactive",
-                    "action": "Check for interactive input element",
-                    "success": has_input.parsed_response,
-                    "notes": "Interactive element found" if has_input.parsed_response else "No interactive element visible",
-                    "timestamp": datetime.now().isoformat()
-                })
-                
-                if has_input.parsed_response:
-                    success = True
-                else:
-                    # Approach 2: Look for demo/playground links
-                    print("  Attempt 2: Look for 'Demo' or 'Playground' link")
-                    has_demo_link = nova.act_get(
-                        "Is there a link or button with 'Demo', 'Try', 'Playground', or 'Test'?",
-                        schema=BOOL_SCHEMA
-                    )
-                    
+                if not ok:
                     observations.append({
-                        "step": "find_demo_link",
-                        "action": "Check for demo/playground link",
-                        "success": has_demo_link.parsed_response,
-                        "notes": "Demo link found" if has_demo_link.parsed_response else "No demo/playground access found",
+                        "step": "find_interactive",
+                        "action": "Check for interactive input element",
+                        "success": False,
+                        "notes": f"Nova Act error: {error}",
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    session_failed = True
+                else:
+                    observations.append({
+                        "step": "find_interactive",
+                        "action": "Check for interactive input element",
+                        "success": response,
+                        "notes": "Interactive element found" if response else "No interactive element visible",
                         "timestamp": datetime.now().isoformat()
                     })
                     
-                    success = has_demo_link.parsed_response
+                    if response:
+                        success = True
+                    elif not session_failed and is_session_healthy(nova):
+                        # Approach 2: Look for demo/playground links
+                        print("  Attempt 2: Look for 'Demo' or 'Playground' link")
+                        ok2, response2, error2 = safe_act_get(
+                            nova,
+                            "Is there a link or button with 'Demo', 'Try', 'Playground', or 'Test'?",
+                            schema=BOOL_SCHEMA,
+                            timeout=15
+                        )
+                        
+                        if not ok2:
+                            observations.append({
+                                "step": "find_demo_link",
+                                "action": "Check for demo/playground link",
+                                "success": False,
+                                "notes": f"Nova Act error: {error2}",
+                                "timestamp": datetime.now().isoformat()
+                            })
+                            session_failed = True
+                        else:
+                            observations.append({
+                                "step": "find_demo_link",
+                                "action": "Check for demo/playground link",
+                                "success": response2,
+                                "notes": "Demo link found" if response2 else "No demo/playground access found",
+                                "timestamp": datetime.now().isoformat()
+                            })
+                            success = response2
             
             elif "pricing" in test_case.lower():
                 print("→ Exploring: Finding pricing...")
                 
                 # Approach 1: Check navigation
                 print("  Attempt 1: Check navigation for 'Pricing'")
-                nav_pricing = nova.act_get(
+                ok, response, error = safe_act_get(
+                    nova,
                     "Is there a navigation link with 'Pricing'?",
-                    schema=BOOL_SCHEMA
+                    schema=BOOL_SCHEMA,
+                    timeout=15
                 )
                 
-                if nav_pricing.parsed_response:
+                if not ok:
+                    observations.append({
+                        "step": "find_pricing_nav",
+                        "action": "Check navigation for pricing",
+                        "success": False,
+                        "notes": f"Nova Act error: {error}",
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    session_failed = True
+                elif response:
                     observations.append({
                         "step": "find_pricing_nav",
                         "action": "Check navigation for pricing",
@@ -336,55 +437,108 @@ def iterative_test(persona: Dict, test_case: str, page_analysis: Dict) -> Dict:
                         "timestamp": datetime.now().isoformat()
                     })
                     
-                    # Approach 2: Check page body
-                    print("  Attempt 2: Scroll and look for pricing in content")
-                    nova.act("Scroll down to see more content")
-                    time.sleep(2)
-                    
-                    has_pricing_body = nova.act_get(
-                        "Do you see any text about pricing, cost, plans, or subscription?",
-                        schema=BOOL_SCHEMA
-                    )
-                    
-                    observations.append({
-                        "step": "find_pricing_body",
-                        "action": "Scroll and check for pricing in body",
-                        "success": has_pricing_body.parsed_response,
-                        "notes": "Pricing found in body" if has_pricing_body.parsed_response else "TRANSPARENCY ISSUE: No pricing information visible",
-                        "timestamp": datetime.now().isoformat()
-                    })
-                    
-                    success = has_pricing_body.parsed_response
+                    # Approach 2: Scroll and check page body (SAFE SCROLL)
+                    if not session_failed and is_session_healthy(nova):
+                        print("  Attempt 2: Scroll and look for pricing in content")
+                        scroll_ok, scroll_error = safe_scroll(nova, direction="down", max_attempts=2)
+                        
+                        if not scroll_ok:
+                            observations.append({
+                                "step": "scroll_for_pricing",
+                                "action": "Scroll down to find pricing",
+                                "success": False,
+                                "notes": f"Scroll failed: {scroll_error}",
+                                "timestamp": datetime.now().isoformat()
+                            })
+                            session_failed = True
+                        else:
+                            time.sleep(1)  # Let page settle
+                            
+                            ok2, response2, error2 = safe_act_get(
+                                nova,
+                                "Do you see any text about pricing, cost, plans, or subscription?",
+                                schema=BOOL_SCHEMA,
+                                timeout=15
+                            )
+                            
+                            if not ok2:
+                                observations.append({
+                                    "step": "find_pricing_body",
+                                    "action": "Check body for pricing after scroll",
+                                    "success": False,
+                                    "notes": f"Nova Act error: {error2}",
+                                    "timestamp": datetime.now().isoformat()
+                                })
+                                session_failed = True
+                            else:
+                                observations.append({
+                                    "step": "find_pricing_body",
+                                    "action": "Scroll and check for pricing in body",
+                                    "success": response2,
+                                    "notes": "Pricing found in body" if response2 else "TRANSPARENCY ISSUE: No pricing information visible",
+                                    "timestamp": datetime.now().isoformat()
+                                })
+                                success = response2
+                    else:
+                        observations.append({
+                            "step": "scroll_for_pricing",
+                            "action": "Scroll to check body",
+                            "success": False,
+                            "notes": "Skipped - session unhealthy",
+                            "timestamp": datetime.now().isoformat()
+                        })
             
             elif "value proposition" in test_case.lower() or "understand" in test_case.lower():
                 print("→ Exploring: Understanding value proposition...")
                 
                 # Check if purpose is clearly stated
-                has_tagline = nova.act_get(
+                ok, response, error = safe_act_get(
+                    nova,
                     "Is there a sentence near the top that explains what this tool does or what problem it solves?",
-                    schema=BOOL_SCHEMA
+                    schema=BOOL_SCHEMA,
+                    timeout=15
                 )
                 
-                observations.append({
-                    "step": "find_value_prop",
-                    "action": "Check for clear value proposition",
-                    "success": has_tagline.parsed_response,
-                    "notes": "Value prop visible" if has_tagline.parsed_response else "UX ISSUE: No clear value proposition",
-                    "timestamp": datetime.now().isoformat()
-                })
-                
-                success = has_tagline.parsed_response
+                if not ok:
+                    observations.append({
+                        "step": "find_value_prop",
+                        "action": "Check for clear value proposition",
+                        "success": False,
+                        "notes": f"Nova Act error: {error}",
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    session_failed = True
+                else:
+                    observations.append({
+                        "step": "find_value_prop",
+                        "action": "Check for clear value proposition",
+                        "success": response,
+                        "notes": "Value prop visible" if response else "UX ISSUE: No clear value proposition",
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    success = response
             
             elif "help" in test_case.lower() or "support" in test_case.lower():
                 print("→ Exploring: Finding help/support...")
                 
-                # Approach 1: Header
-                has_help_header = nova.act_get(
+                # Approach 1: Check header
+                ok, response, error = safe_act_get(
+                    nova,
                     "Is there a 'Help', 'Support', or 'Contact' link in the header?",
-                    schema=BOOL_SCHEMA
+                    schema=BOOL_SCHEMA,
+                    timeout=15
                 )
                 
-                if has_help_header.parsed_response:
+                if not ok:
+                    observations.append({
+                        "step": "find_help_header",
+                        "action": "Check header for help",
+                        "success": False,
+                        "notes": f"Nova Act error: {error}",
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    session_failed = True
+                elif response:
                     observations.append({
                         "step": "find_help_header",
                         "action": "Check header for help",
@@ -402,25 +556,56 @@ def iterative_test(persona: Dict, test_case: str, page_analysis: Dict) -> Dict:
                         "timestamp": datetime.now().isoformat()
                     })
                     
-                    # Approach 2: Footer
-                    print("  Attempt 2: Check footer")
-                    nova.act("Scroll to the bottom of the page")
-                    time.sleep(2)
-                    
-                    has_help_footer = nova.act_get(
-                        "Is there a 'Help', 'Support', 'Contact', or 'FAQ' link in the footer?",
-                        schema=BOOL_SCHEMA
-                    )
-                    
-                    observations.append({
-                        "step": "find_help_footer",
-                        "action": "Check footer for help",
-                        "success": has_help_footer.parsed_response,
-                        "notes": "Help in footer" if has_help_footer.parsed_response else "MAJOR ISSUE: No help/support access",
-                        "timestamp": datetime.now().isoformat()
-                    })
-                    
-                    success = has_help_footer.parsed_response
+                    # Approach 2: Scroll to footer (SAFE SCROLL)
+                    if not session_failed and is_session_healthy(nova):
+                        print("  Attempt 2: Check footer")
+                        scroll_ok, scroll_error = safe_scroll(nova, direction="down", max_attempts=3)
+                        
+                        if not scroll_ok:
+                            observations.append({
+                                "step": "scroll_to_footer",
+                                "action": "Scroll to footer",
+                                "success": False,
+                                "notes": f"Scroll failed: {scroll_error}",
+                                "timestamp": datetime.now().isoformat()
+                            })
+                            session_failed = True
+                        else:
+                            time.sleep(1)
+                            
+                            ok2, response2, error2 = safe_act_get(
+                                nova,
+                                "Is there a 'Help', 'Support', 'Contact', or 'FAQ' link in the footer?",
+                                schema=BOOL_SCHEMA,
+                                timeout=15
+                            )
+                            
+                            if not ok2:
+                                observations.append({
+                                    "step": "find_help_footer",
+                                    "action": "Check footer for help",
+                                    "success": False,
+                                    "notes": f"Nova Act error: {error2}",
+                                    "timestamp": datetime.now().isoformat()
+                                })
+                                session_failed = True
+                            else:
+                                observations.append({
+                                    "step": "find_help_footer",
+                                    "action": "Check footer for help",
+                                    "success": response2,
+                                    "notes": "Help in footer" if response2 else "MAJOR ISSUE: No help/support access",
+                                    "timestamp": datetime.now().isoformat()
+                                })
+                                success = response2
+                    else:
+                        observations.append({
+                            "step": "scroll_to_footer",
+                            "action": "Scroll to footer",
+                            "success": False,
+                            "notes": "Skipped - session unhealthy",
+                            "timestamp": datetime.now().isoformat()
+                        })
             
             else:
                 # Generic exploration for other test cases
@@ -491,11 +676,35 @@ def main():
             print(f"  {i}. {tc}")
         
         for test_case in test_cases:
-            result = iterative_test(persona, test_case, page_analysis)
-            all_results.append(result)
-            
-            status = "✅" if result['success'] else "❌"
-            print(f"\n{status} Result: {test_case} ({result['duration_seconds']}s)")
+            try:
+                result = iterative_test(persona, test_case, page_analysis)
+                all_results.append(result)
+                
+                status = "✅" if result['success'] else "❌"
+                print(f"\n{status} Result: {test_case} ({result['duration_seconds']}s)")
+            except Exception as e:
+                # If a test completely fails, log it and continue with remaining tests
+                print(f"\n❌ CRITICAL ERROR in test: {test_case}")
+                print(f"   Error: {str(e)}")
+                all_results.append({
+                    "persona": persona['name'],
+                    "persona_archetype": persona['archetype'],
+                    "tech_proficiency": persona['tech_proficiency'],
+                    "test_case": test_case,
+                    "success": False,
+                    "duration_seconds": 0,
+                    "observations": [{
+                        "step": "fatal_error",
+                        "action": "Test execution",
+                        "success": False,
+                        "notes": f"Fatal error: {str(e)}",
+                        "timestamp": datetime.now().isoformat()
+                    }],
+                    "trace_files": [],
+                    "timestamp": datetime.now().isoformat()
+                })
+                # Continue with next test despite failure
+                continue
     
     # Save results
     with open(RESULTS_FILE, 'w') as f:
