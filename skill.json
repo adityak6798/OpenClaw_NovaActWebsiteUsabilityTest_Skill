@@ -1,0 +1,32 @@
+{
+  "name": "nova-act-usability",
+  "version": "1.0.0",
+  "description": "AI-orchestrated usability testing using Amazon Nova Act browser automation",
+  "author": "Adi",
+  "repository": "https://github.com/YOUR_USERNAME/openclaw-skill-nova-act-usability",
+  "license": "MIT",
+  "tags": [
+    "testing",
+    "browser-automation",
+    "usability",
+    "nova-act",
+    "playwright",
+    "web-testing"
+  ],
+  "requirements": {
+    "python": ">=3.8",
+    "packages": [
+      "nova-act",
+      "playwright"
+    ]
+  },
+  "configuration": {
+    "required": ["apiKey"],
+    "configPath": "~/.openclaw/config/nova-act.json",
+    "example": {
+      "apiKey": "your-nova-act-api-key-here"
+    }
+  },
+  "entrypoint": "SKILL.md",
+  "category": "Testing & Automation"
+}
