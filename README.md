@@ -53,19 +53,23 @@ See [RELEASE_NOTES_2.0.0.md](RELEASE_NOTES_2.0.0.md) for full details.
 **Form Submission:**
 - Fill form fields → **STOP before submit**
 
-### Safety Guarantees
+### Safety Guardrails
 
-The skill will **NEVER:**
-- ❌ Complete actual purchases
-- ❌ Create real accounts
-- ❌ Post publicly
-- ❌ Send emails/messages
-- ❌ Subscribe to newsletters
+This skill includes guardrails designed to stop before material impact actions. However, **no AI-based system can guarantee safety**—behavior depends on website structure, Nova Act responses, and real-time conditions.
 
-The skill will **ALWAYS:**
+**Guardrails are designed to:**
+- 🛑 Stop before completing purchases
+- 🛑 Stop before creating accounts
+- 🛑 Stop before posting publicly
+- 🛑 Stop before sending emails/messages
+- 🛑 Stop before subscribing to newsletters
+
+**The skill is designed to:**
 - ✅ Test up to (but not including) final action
 - ✅ Verify final button exists and is accessible
-- ✅ Document safety stop in observations  
+- ✅ Document safety stop in observations
+
+**⚠️ Recommendation:** Always test on staging environments first. Do not run against production systems with real payment methods or accounts without understanding the risks.  
 
 ## Installation
 
@@ -89,7 +93,7 @@ cd ~/.openclaw/skills/nova-act-usability
 5. ℹ️  Provide instructions for any manual steps needed
 
 **After setup:**
-1. Get your Nova Act API key from [AWS Console](https://console.aws.amazon.com/)
+1. Get your Nova Act API key from [Nova Act Developer Portal](https://nova.amazon.com/dev/api)
 2. Edit `~/.openclaw/config/nova-act.json`
 3. Replace `"your-nova-act-api-key-here"` with your actual key
 
@@ -120,7 +124,7 @@ EOF
 
 - **Python 3.8+** (Python 3.12+ recommended)
 - **~300MB disk space** for Playwright browser
-- **Nova Act API key** from [AWS Console](https://console.aws.amazon.com/)
+- **Nova Act API key** from [Nova Act Developer Portal](https://nova.amazon.com/dev/api)
 
 ## Usage
 
@@ -187,12 +191,15 @@ Unlike traditional testing tools with hardcoded scenarios, this skill **generate
 
 This means the skill adapts to ANY website without requiring updates to hardcoded logic!
 
-## Nova Act Quirks
+## Cookbook-Driven Approach
 
-Nova Act uses **exact text matching** - if the page says "Docs" but you ask for "Documentation", it returns FALSE. This skill handles that by:
-- Trying multiple variations per test ("Documentation" → "Docs" → "API" → "Developer")
-- Iterative exploration rather than rigid scripts
-- Logging all attempts for debugging
+This skill uses a **cookbook** (`references/nova-act-cookbook.md`) that captures best practices and patterns for working with Nova Act effectively. The cookbook is:
+
+- **Loaded automatically** at the start of every test session
+- **Continuously updated** with new patterns and techniques as we learn what works best
+- **Comprehensive** - covers prompt patterns, workflow testing, safety strategies, and error handling
+
+The cookbook approach means the skill adapts to Nova Act's evolving capabilities without requiring code changes.
 
 ## Files
 
@@ -200,7 +207,7 @@ Nova Act uses **exact text matching** - if the page says "Docs" but you ask for 
 - `scripts/run_adaptive_test.py` - Adaptive testing engine
 - `scripts/enhanced_report_generator.py` - HTML report generator with trace links
 - `scripts/trace_finder.py` - Extracts trace file paths from Nova Act output
-- `references/nova-act-cookbook.md` - Nova Act usage patterns and quirks
+- `references/nova-act-cookbook.md` - Nova Act best practices, patterns, and safety guidelines
 - `references/persona-examples.md` - Sample personas for different site types
 - `assets/report-template.html` - HTML report template
 

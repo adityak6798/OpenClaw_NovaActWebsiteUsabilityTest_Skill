@@ -231,20 +231,24 @@ Users can trigger this skill by saying:
 **Form Submission:**
 - Fill form → **STOP before submit**
 
-### Safety Guarantees
+### Safety Guardrails
 
-The skill will **NEVER:**
-- Complete actual purchases
-- Create real accounts
-- Post publicly
-- Send emails/messages
-- Subscribe to newsletters
-- Make any action with monetary/legal/reputational impact
+This skill includes guardrails designed to stop before material impact actions. However, **no AI-based system can guarantee safety**—behavior depends on website structure, Nova Act responses, and real-time conditions.
 
-The skill will **ALWAYS:**
+**Guardrails are designed to:**
+- Stop before completing purchases
+- Stop before creating accounts
+- Stop before posting publicly
+- Stop before sending emails/messages
+- Stop before subscribing to newsletters
+- Stop before actions with monetary/legal/reputational impact
+
+**The skill is designed to:**
 - Test up to (but not including) the final action
 - Verify the final button exists and is accessible
 - Document the safety stop in observations
+
+**⚠️ Recommendation:** Always test on staging environments first. Do not run against production systems with real payment methods or accounts without understanding the risks.
 
 ## 🧠 Agent Analysis (CRITICAL)
 
@@ -837,7 +841,7 @@ cd ~/.openclaw/skills/nova-act-usability
 - ✅ Create config file template
 
 **After setup:**
-1. Get your Nova Act API key from [AWS Console](https://console.aws.amazon.com/)
+1. Get your Nova Act API key from [Nova Act Developer Portal](https://nova.amazon.com/dev/api)
 2. Edit `~/.openclaw/config/nova-act.json`
 3. Replace `"your-nova-act-api-key-here"` with your actual key
 
