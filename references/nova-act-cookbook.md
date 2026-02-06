@@ -4,7 +4,40 @@ Best practices for using Amazon Nova Act effectively in usability testing.
 
 ## Core Principles
 
-### 0. Nova Act Matching Behavior
+### 0. Nova Act is a Browser Automation Tool, NOT a Reasoning Engine
+
+**CRITICAL:** Nova Act executes browser actions. It should NOT:
+- Reason about user personas
+- Judge if a task is "easy" or "hard"
+- Evaluate usability or user experience
+- Decide what's "important" for a user type
+
+**The Claude agent does the reasoning.** Nova Act just clicks, types, and reports what it sees.
+
+❌ **WRONG:** Asking Nova Act to reason
+```python
+# Don't ask Nova Act to think about personas or UX
+nova.act("As a beginner user, can you easily find the documentation?")
+nova.act("Would a business professional find the pricing clear?")
+nova.act("Is this task accomplishable for someone with low technical skills?")
+```
+
+✅ **RIGHT:** Give Nova Act direct browser tasks
+```python
+# Simple, direct browser commands
+nova.act("Click the Documentation link in the navigation")
+nova.act("Find and click a link containing 'Pricing'")
+nova.act_get("What text is displayed in the main heading?")
+nova.act_get("List the navigation menu items visible on this page")
+```
+
+**The workflow:**
+1. **Agent** decides what to test based on persona (e.g., "Can Dorothy find how to watch golf?")
+2. **Agent** generates simple prompts for Nova Act ("Click 'Watch & Listen' in the navigation")
+3. **Nova Act** executes the browser task and returns raw results
+4. **Agent** interprets results in context of persona ("Dorothy would struggle here because...")
+
+### 1. Nova Act Matching Behavior
 
 **CRITICAL:** Nova Act has two matching modes:
 
@@ -252,6 +285,232 @@ with NovaAct(
     # Trace file automatically created
 ```
 
+## Workflow Testing (Not Just Information Finding)
+
+**Modern usability testing goes beyond "can users find the docs?"** — it tests whether users can **complete real tasks end-to-end**.
+
+### Real User Journeys to Test
+
+**Flight Booking Sites:**
+- Search for flights (origin, destination, dates)
+- Filter results (price, time, airline)
+- Select a flight
+- Fill passenger information
+- **STOP before payment**
+
+**E-Commerce Sites:**
+- Search for product
+- Add to cart
+- Modify quantity
+- Proceed to checkout
+- Fill shipping info
+- **STOP before payment/order placement**
+
+**Social Media Platforms:**
+- Create new post
+- Add text content
+- Attach media (if applicable)
+- Preview post
+- **STOP before publishing**
+
+**SaaS/Software Sites:**
+- Sign up flow (fill registration form)
+- **STOP before final submission** (unless explicitly testing signup)
+- Demo/trial access workflow
+- Feature exploration
+- Settings configuration
+
+**Newsletter/Form Submissions:**
+- Fill out form fields
+- Verify validation works
+- **STOP before final submit button** (unless explicitly testing)
+
+### Safety Guardrails - STOP Before Material Impact ⚠️
+
+**ALWAYS stop testing before actions that cause:**
+- 💳 **Monetary impact**: Charges, purchases, subscriptions, donations
+- 📧 **External communication**: Sending emails, posting publicly, messaging real users
+- 🔐 **Account creation**: Creating real accounts (use "test" flows if available)
+- 🗑️ **Data modification**: Deleting, editing, or corrupting existing data
+- 📝 **Legal commitment**: Agreeing to terms, signing contracts, submitting official forms
+- 📬 **Spam/annoyance**: Newsletter signups, notification opt-ins
+
+**How to Test Safely:**
+
+1. **Navigate TO the final step** (checkout page, publish screen, submit button)
+2. **Verify the final action is accessible** (button exists, is enabled, is clear)
+3. **Use `act_get()` to observe without acting**:
+   ```python
+   # Good: Observe the checkout button
+   checkout_ready = nova.act_get(
+       "Is there a 'Complete Purchase' or 'Pay Now' button visible and enabled?",
+       schema=BOOL_SCHEMA
+   )
+   ```
+4. **Document readiness but DO NOT CLICK**
+5. **In observations, explicitly note the safety stop**:
+   ```python
+   observations.append({
+       "step": "verify_checkout_accessible",
+       "action": "Confirmed payment button is reachable",
+       "success": checkout_ready.parsed_response,
+       "notes": "✅ Workflow complete up to payment. STOPPED per safety guidelines - no actual purchase made."
+   })
+   ```
+
+**Example: Safe Flight Booking Test**
+
+```python
+def test_flight_booking_workflow(nova, persona):
+    """Test flight booking WITHOUT actually booking."""
+    
+    observations = []
+    
+    # Step 1: Search
+    nova.act("Find the flight search form")
+    nova.act("Enter departure city: New York")
+    nova.act("Enter destination city: Los Angeles")
+    nova.act("Select departure date 2 weeks from today")
+    nova.act("Select return date 3 weeks from today")
+    nova.act("Click the search button")
+    
+    search_success = nova.act_get(
+        "Are flight results displayed with prices and times?",
+        schema=BOOL_SCHEMA
+    )
+    
+    observations.append({
+        "step": "search_flights",
+        "action": "Searched for NYC to LAX flights",
+        "success": search_success.parsed_response,
+        "notes": "Flight search returned results" if search_success.parsed_response else "Search failed or no results"
+    })
+    
+    if not search_success.parsed_response:
+        return observations  # Can't continue if search failed
+    
+    # Step 2: Select flight
+    nova.act("Click on the first available flight option")
+    
+    flight_selected = nova.act_get(
+        "Is the selected flight now highlighted or showing details?",
+        schema=BOOL_SCHEMA
+    )
+    
+    observations.append({
+        "step": "select_flight",
+        "action": "Selected first available flight",
+        "success": flight_selected.parsed_response,
+        "notes": "Flight selection worked" if flight_selected.parsed_response else "Could not select flight"
+    })
+    
+    # Step 3: Fill passenger info
+    nova.act("Click continue or proceed to passenger information")
+    nova.act("Enter passenger name: John Doe")
+    nova.act("Enter email: test@example.com")
+    nova.act("Enter phone: 555-0123")
+    
+    form_filled = nova.act_get(
+        "Are all passenger information fields filled out?",
+        schema=BOOL_SCHEMA
+    )
+    
+    observations.append({
+        "step": "fill_passenger_info",
+        "action": "Filled passenger details",
+        "success": form_filled.parsed_response,
+        "notes": "Form filled successfully" if form_filled.parsed_response else "Form filling incomplete"
+    })
+    
+    # Step 4: Verify checkout is reachable (BUT DON'T CLICK)
+    checkout_accessible = nova.act_get(
+        "Is there a 'Continue to Payment', 'Proceed to Checkout', or 'Complete Booking' button visible?",
+        schema=BOOL_SCHEMA
+    )
+    
+    observations.append({
+        "step": "verify_payment_reachable",
+        "action": "Verified checkout button exists",
+        "success": checkout_accessible.parsed_response,
+        "notes": "⚠️ SAFETY STOP: Checkout accessible but NOT clicked. Booking workflow verified up to payment step. No actual booking made."
+    })
+    
+    # Overall success: Could we reach checkout?
+    workflow_success = checkout_accessible.parsed_response
+    
+    return observations, workflow_success
+```
+
+**Example: Safe E-Commerce Test**
+
+```python
+def test_ecommerce_purchase(nova, persona):
+    """Test product purchase workflow WITHOUT completing transaction."""
+    
+    # Search for product
+    nova.act("Search for 'laptop'")
+    nova.act("Click on the first product in search results")
+    
+    # Add to cart
+    nova.act("Click the 'Add to Cart' button")
+    
+    cart_success = nova.act_get(
+        "Is there confirmation the item was added to cart?",
+        schema=BOOL_SCHEMA
+    )
+    
+    # Proceed to checkout
+    nova.act("Click on the cart icon or 'View Cart' button")
+    nova.act("Click 'Proceed to Checkout' or 'Checkout'")
+    
+    # Fill shipping (use fake data)
+    nova.act("Fill shipping name: Test User")
+    nova.act("Fill address: 123 Test St")
+    nova.act("Fill city: Test City")
+    nova.act("Fill zip: 12345")
+    
+    # Verify we reached payment step
+    payment_page = nova.act_get(
+        "Is there a payment method section or credit card form visible?",
+        schema=BOOL_SCHEMA
+    )
+    
+    # STOP HERE - do not enter payment info or submit
+    return {
+        "success": payment_page.parsed_response,
+        "notes": "⚠️ SAFETY STOP: Reached payment page. Cart and checkout flow functional. NO PURCHASE MADE."
+    }
+```
+
+### Detecting Material Impact Actions
+
+When generating test strategies, identify if the test case involves:
+
+```python
+MATERIAL_IMPACT_KEYWORDS = [
+    # Monetary
+    "buy", "purchase", "checkout", "pay", "subscribe", "donate",
+    # Communication
+    "post", "publish", "share", "send", "email", "message",
+    # Account creation
+    "sign up", "register", "create account",
+    # Submissions
+    "submit", "apply", "enroll",
+    # Newsletter/notifications
+    "subscribe", "sign up for newsletter", "get updates"
+]
+
+def requires_safety_stop(test_case: str) -> bool:
+    """Check if test case involves material impact."""
+    test_lower = test_case.lower()
+    return any(keyword in test_lower for keyword in MATERIAL_IMPACT_KEYWORDS)
+```
+
+If detected, **modify the test strategy** to:
+1. Include all steps UP TO the final action
+2. Replace final action with verification
+3. Document the safety stop in observations
+
 ## Usability Observations
 
 Document friction points as you observe them:
@@ -261,3 +520,6 @@ Document friction points as you observe them:
 - **Found but unclear label** = Minor UX issue
 - **Small text, poor contrast** = Accessibility issue
 - **>20 steps for simple task** = Efficiency issue
+- **Workflow reachable but confusing** = Navigation/flow issue
+- **Form validation unclear or missing** = Usability issue
+- **Mobile responsiveness problems** = Accessibility issue

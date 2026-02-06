@@ -1,19 +1,102 @@
 #!/usr/bin/env python3
 """
 Dynamic exploration strategy generator.
-Uses AI to generate contextual Nova Act prompts instead of hardcoded logic.
+Uses cookbook guidance to generate contextual Nova Act prompts and workflows.
 """
 
 from typing import Dict, List, Tuple
 import json
+import re
+
+# Material impact keywords that require safety stops
+MATERIAL_IMPACT_KEYWORDS = [
+    # Monetary
+    "buy", "purchase", "checkout", "pay", "subscribe", "donate", "order",
+    # Communication
+    "post", "publish", "share", "send", "email", "message", "tweet",
+    # Account creation
+    "sign up", "register", "create account", "join",
+    # Submissions
+    "submit", "apply", "enroll", "book", "reserve",
+    # Newsletter/notifications
+    "newsletter", "get updates", "notify"
+]
+
+def requires_safety_stop(test_case: str) -> bool:
+    """Check if test case involves material impact and needs safety stop."""
+    test_lower = test_case.lower()
+    return any(keyword in test_lower for keyword in MATERIAL_IMPACT_KEYWORDS)
+
+def detect_workflow_type(test_case: str) -> Tuple[bool, str]:
+    """
+    Determine if this is a workflow test (multi-step journey) vs information-finding.
+    
+    Returns: (is_workflow, workflow_type)
+    """
+    workflows = {
+        "booking": ["book", "reserve", "schedule", "appointment"],
+        "purchasing": ["buy", "purchase", "order", "checkout", "add to cart"],
+        "posting": ["post", "publish", "share", "upload", "tweet", "comment"],
+        "signup": ["sign up", "register", "create account", "join"],
+        "submission": ["submit", "send", "contact", "apply", "enroll"],
+        "search": ["search for", "find product", "look for item"]
+    }
+    
+    test_lower = test_case.lower()
+    for workflow_type, keywords in workflows.items():
+        if any(kw in test_lower for kw in keywords):
+            return True, workflow_type
+    
+    return False, "information_finding"
+
+def parse_cookbook_hints(cookbook: str) -> Dict:
+    """
+    Extract actionable hints from cookbook content.
+    Returns guidance for prompt construction.
+    """
+    hints = {
+        "use_loose_matching": True,  # Default: avoid quotes for flexibility
+        "small_steps": True,  # Break into small steps
+        "observe_after_action": True,  # Check results after each action
+        "use_schemas": True,  # Use structured extraction
+        "max_steps": 30,  # Keep under 30 steps
+    }
+    
+    if not cookbook:
+        return hints
+    
+    cookbook_lower = cookbook.lower()
+    
+    # Check for matching guidance
+    if "exact matching" in cookbook_lower and "quotes" in cookbook_lower:
+        hints["matching_guidance"] = "Use quotes only for exact text; prefer loose matching for flexibility"
+    
+    # Check for step size guidance
+    if "fewer than 30 steps" in cookbook_lower or "small steps" in cookbook_lower:
+        hints["step_guidance"] = "Keep tasks small and atomic"
+    
+    # Check for observation guidance
+    if "observe and analyze" in cookbook_lower:
+        hints["observation_guidance"] = "Verify each action succeeded before proceeding"
+    
+    return hints
+
 
 def generate_exploration_strategy(
     test_case: str,
     persona: Dict,
-    page_analysis: Dict
+    page_analysis: Dict,
+    cookbook: str = ""
 ) -> List[Dict]:
     """
     Generate a dynamic exploration strategy for a given test case.
+    Uses cookbook guidance for workflow testing and safety stops.
+    
+    Args:
+        test_case: What the user wants to accomplish
+        persona: User persona with archetype and tech_proficiency
+        page_analysis: Analysis of the target page
+        cookbook: Nova Act cookbook content for prompt guidance (Bug #14: NOW USED!)
     
     Returns a list of exploration steps, each containing:
     - step_name: Human-readable step name
@@ -21,9 +104,13 @@ def generate_exploration_strategy(
     - prompt: The actual Nova Act prompt to use
     - expected_outcome: What we're looking for
     - fallback_prompts: Alternative prompts if first fails
+    - is_safety_stop: True if this step should observe but not execute
     
-    This replaces hardcoded if/elif logic with contextual prompts.
+    This replaces hardcoded if/elif logic with contextual, cookbook-informed prompts.
     """
+    
+    # Parse cookbook for actionable guidance (Bug #14: Use the cookbook!)
+    cookbook_hints = parse_cookbook_hints(cookbook)
     
     # Extract context
     archetype = persona.get('archetype', 'user')
@@ -32,8 +119,318 @@ def generate_exploration_strategy(
     navigation = page_analysis.get('navigation', [])
     key_elements = page_analysis.get('key_elements', {})
     
+    # Detect if this is a workflow test
+    is_workflow, workflow_type = detect_workflow_type(test_case)
+    needs_safety_stop = requires_safety_stop(test_case)
+    
+    if is_workflow:
+        print(f"  🔄 Detected workflow type: {workflow_type}")
+    if needs_safety_stop:
+        print(f"  ⚠️  Safety stop required - will not complete final action")
+    if cookbook:
+        print(f"  📖 Using cookbook guidance for prompts")
+    
     strategy = []
     
+    # Apply cookbook guidance to prompts (Bug #14: Actually use cookbook!)
+    def apply_cookbook_guidance(prompt: str) -> str:
+        """Apply cookbook best practices to a prompt."""
+        modified = prompt
+        
+        # Cookbook says: use loose matching (no quotes) for flexibility
+        if cookbook_hints.get("use_loose_matching"):
+            # Remove unnecessary quotes around search terms
+            # e.g., 'link labeled "Documentation"' -> 'link with Documentation'
+            modified = re.sub(r'"([^"]+)"', r'\1', modified)
+        
+        # Cookbook says: be direct and specific
+        if cookbook_hints.get("step_guidance"):
+            # Remove vague language
+            modified = modified.replace("Let's see", "Check")
+            modified = modified.replace("try to find", "find")
+            modified = modified.replace("maybe look for", "look for")
+        
+        return modified
+    
+    # ===== WORKFLOW TESTS (Multi-step journeys) =====
+    if is_workflow:
+        if workflow_type == "booking":
+            # Flight/hotel/appointment booking workflow
+            strategy.extend([
+                {
+                    "step_name": "find_booking_form",
+                    "action_type": "query",
+                    "prompt": "Is there a search form or booking interface visible on this page?",
+                    "expected_outcome": "Locate booking form",
+                    "fallback_prompts": [
+                        "Do you see input fields for dates, location, or search?",
+                        "Is there a 'Book Now' or 'Search' button visible?"
+                    ]
+                },
+                {
+                    "step_name": "fill_search_criteria",
+                    "action_type": "navigate",
+                    "prompt": "Fill in the search form with test data: departure 'New York', destination 'Los Angeles', dates 2 weeks from now",
+                    "expected_outcome": "Search form filled",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "initiate_search",
+                    "action_type": "navigate",
+                    "prompt": "Click the search or submit button to see results",
+                    "expected_outcome": "Results displayed",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "verify_results",
+                    "action_type": "query",
+                    "prompt": "Are booking options or results now displayed with relevant information?",
+                    "expected_outcome": "Results visible",
+                    "fallback_prompts": ["Did the page change to show available options?"]
+                },
+                {
+                    "step_name": "select_option",
+                    "action_type": "navigate",
+                    "prompt": "Select the first available option",
+                    "expected_outcome": "Option selected",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "proceed_to_details",
+                    "action_type": "navigate",
+                    "prompt": "Click continue, next, or proceed to enter details",
+                    "expected_outcome": "Details form shown",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "fill_user_details",
+                    "action_type": "navigate",
+                    "prompt": "Fill in user details: Name 'Test User', Email 'test@example.com', Phone '5550123'",
+                    "expected_outcome": "Details filled",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "verify_checkout_accessible",
+                    "action_type": "query",
+                    "prompt": "Is there a 'Continue to Payment', 'Checkout', or 'Complete Booking' button visible?",
+                    "expected_outcome": "⚠️ SAFETY STOP: Checkout accessible but NOT clicked",
+                    "fallback_prompts": [],
+                    "is_safety_stop": True
+                }
+            ])
+            
+        elif workflow_type == "purchasing":
+            # E-commerce purchase workflow
+            strategy.extend([
+                {
+                    "step_name": "search_product",
+                    "action_type": "navigate",
+                    "prompt": "Find and use the search function to search for 'laptop' or similar product",
+                    "expected_outcome": "Product search executed",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "verify_search_results",
+                    "action_type": "query",
+                    "prompt": "Are product search results displayed with images and prices?",
+                    "expected_outcome": "Results shown",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "select_product",
+                    "action_type": "navigate",
+                    "prompt": "Click on the first product in the results",
+                    "expected_outcome": "Product page loaded",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "add_to_cart",
+                    "action_type": "navigate",
+                    "prompt": "Click the 'Add to Cart' or 'Buy' button",
+                    "expected_outcome": "Item added to cart",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "verify_cart_updated",
+                    "action_type": "query",
+                    "prompt": "Is there confirmation the item was added (cart icon updated, notification shown, etc.)?",
+                    "expected_outcome": "Cart confirmation",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "navigate_to_cart",
+                    "action_type": "navigate",
+                    "prompt": "Click on the cart icon or 'View Cart' button",
+                    "expected_outcome": "Cart page loaded",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "proceed_to_checkout",
+                    "action_type": "navigate",
+                    "prompt": "Click 'Proceed to Checkout' or 'Checkout' button",
+                    "expected_outcome": "Checkout initiated",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "fill_shipping",
+                    "action_type": "navigate",
+                    "prompt": "Fill shipping information: Name 'Test User', Address '123 Test St', City 'Test City', ZIP '12345'",
+                    "expected_outcome": "Shipping filled",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "verify_payment_page",
+                    "action_type": "query",
+                    "prompt": "Is there a payment method section, credit card form, or 'Complete Purchase' button visible?",
+                    "expected_outcome": "⚠️ SAFETY STOP: Payment page accessible but NO PURCHASE MADE",
+                    "fallback_prompts": [],
+                    "is_safety_stop": True
+                }
+            ])
+            
+        elif workflow_type == "posting":
+            # Social media posting workflow
+            strategy.extend([
+                {
+                    "step_name": "find_create_button",
+                    "action_type": "query",
+                    "prompt": "Is there a 'Create Post', 'New Post', 'Tweet', or similar button visible?",
+                    "expected_outcome": "Post creation button found",
+                    "fallback_prompts": [
+                        "Do you see a text box where you can write something?",
+                        "Is there a '+' or 'Compose' button?"
+                    ]
+                },
+                {
+                    "step_name": "click_create",
+                    "action_type": "navigate",
+                    "prompt": "Click the post creation button or click in the text area",
+                    "expected_outcome": "Compose interface opened",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "enter_content",
+                    "action_type": "navigate",
+                    "prompt": "Type test content: 'This is a usability test post - please ignore'",
+                    "expected_outcome": "Content entered",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "verify_post_button",
+                    "action_type": "query",
+                    "prompt": "Is there a 'Post', 'Publish', 'Share', or 'Tweet' button visible to complete posting?",
+                    "expected_outcome": "⚠️ SAFETY STOP: Post button accessible but NOT clicked",
+                    "fallback_prompts": [],
+                    "is_safety_stop": True
+                }
+            ])
+            
+        elif workflow_type == "signup":
+            # Account creation workflow
+            strategy.extend([
+                {
+                    "step_name": "find_signup",
+                    "action_type": "query",
+                    "prompt": "Is there a 'Sign Up', 'Register', 'Create Account', or 'Join' button or link visible?",
+                    "expected_outcome": "Signup button found",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "click_signup",
+                    "action_type": "navigate",
+                    "prompt": "Click the signup or register button",
+                    "expected_outcome": "Registration form loaded",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "fill_registration",
+                    "action_type": "navigate",
+                    "prompt": "Fill registration form: Email 'test@example.com', Username 'testuser123', Password 'TestPass123!'",
+                    "expected_outcome": "Form filled",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "verify_submit_button",
+                    "action_type": "query",
+                    "prompt": "Is there a 'Create Account', 'Sign Up', or 'Register' button to submit the form?",
+                    "expected_outcome": "⚠️ SAFETY STOP: Submit button accessible but NOT clicked",
+                    "fallback_prompts": [],
+                    "is_safety_stop": True
+                }
+            ])
+            
+        elif workflow_type == "submission":
+            # Form submission workflow (contact, newsletter, etc.)
+            strategy.extend([
+                {
+                    "step_name": "find_form",
+                    "action_type": "query",
+                    "prompt": "Is there a contact form, submission form, or input fields visible?",
+                    "expected_outcome": "Form located",
+                    "fallback_prompts": [
+                        "Do you see a 'Contact Us' form?",
+                        "Is there an email or message input field?"
+                    ]
+                },
+                {
+                    "step_name": "fill_form_fields",
+                    "action_type": "navigate",
+                    "prompt": "Fill the form with test data: Name 'Test User', Email 'test@example.com', Message 'Usability test message'",
+                    "expected_outcome": "Fields filled",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "verify_submit_accessible",
+                    "action_type": "query",
+                    "prompt": "Is there a 'Submit', 'Send', or 'Contact Us' button visible to complete submission?",
+                    "expected_outcome": "⚠️ SAFETY STOP: Submit button accessible but NOT clicked",
+                    "fallback_prompts": [],
+                    "is_safety_stop": True
+                }
+            ])
+            
+        elif workflow_type == "search":
+            # Product/content search workflow
+            strategy.extend([
+                {
+                    "step_name": "find_search",
+                    "action_type": "query",
+                    "prompt": "Is there a search bar or search button visible?",
+                    "expected_outcome": "Search function located",
+                    "fallback_prompts": ["Do you see a magnifying glass icon or search input?"]
+                },
+                {
+                    "step_name": "perform_search",
+                    "action_type": "navigate",
+                    "prompt": "Enter 'test query' into the search and press enter or click search",
+                    "expected_outcome": "Search executed",
+                    "fallback_prompts": []
+                },
+                {
+                    "step_name": "verify_results",
+                    "action_type": "query",
+                    "prompt": "Are search results displayed that are relevant to the query?",
+                    "expected_outcome": "Results shown",
+                    "fallback_prompts": ["Did the page show any matching items or content?"]
+                },
+                {
+                    "step_name": "assess_result_quality",
+                    "action_type": "query",
+                    "prompt": "Are the results clearly presented with relevant information (titles, descriptions, images)?",
+                    "expected_outcome": "Results quality assessment",
+                    "fallback_prompts": []
+                }
+            ])
+        
+        # Apply cookbook guidance to all prompts before returning
+        for step in strategy:
+            step['prompt'] = apply_cookbook_guidance(step['prompt'])
+            step['fallback_prompts'] = [apply_cookbook_guidance(p) for p in step.get('fallback_prompts', [])]
+        
+        # Return workflow strategy early (don't mix with info-finding)
+        return strategy
+    
+    # ===== INFORMATION-FINDING TESTS (Original logic) =====
     # Analyze the test case and generate appropriate exploration steps
     test_lower = test_case.lower()
     
@@ -255,56 +652,57 @@ def generate_exploration_strategy(
     
     # ===== GENERIC FALLBACK =====
     else:
-        # If we don't recognize the test case, generate generic exploration
-        strategy.append({
-            "step_name": "understand_task",
-            "action_type": "query",
-            "prompt": f"As a {archetype} with {tech_level} technical skills, can you easily accomplish this task: '{test_case}'?",
-            "expected_outcome": "Generic task assessment",
-            "fallback_prompts": [
-                f"Is it obvious how to {test_case} on this page?",
-                f"Where would you look to {test_case}?"
-            ]
-        })
+        # If we don't recognize the test case, generate direct browser tasks
+        # NOTE: Nova Act should NOT reason about personas - just execute browser actions
+        # The agent interprets results in persona context afterward
         
         strategy.append({
             "step_name": "check_navigation",
             "action_type": "query",
-            "prompt": f"Looking at the navigation menu, is there any link that seems related to: {test_case}?",
-            "expected_outcome": "Find relevant nav link",
-            "fallback_prompts": []
+            "prompt": f"List the main navigation menu items visible on this page",
+            "expected_outcome": "Identify available navigation options",
+            "fallback_prompts": [
+                "What links are visible in the header or top navigation?",
+                "What menu options can you see?"
+            ]
         })
+        
+        strategy.append({
+            "step_name": "find_relevant_link",
+            "action_type": "query",
+            "prompt": f"Is there a link or button related to: {test_case}?",
+            "expected_outcome": "Find relevant element",
+            "fallback_prompts": [
+                f"What elements on this page might help with: {test_case}?",
+                f"Do you see any text mentioning: {test_case}?"
+            ]
+        })
+    
+    # Apply cookbook guidance to all prompts before returning (Bug #14)
+    for step in strategy:
+        step['prompt'] = apply_cookbook_guidance(step['prompt'])
+        step['fallback_prompts'] = [apply_cookbook_guidance(p) for p in step.get('fallback_prompts', [])]
     
     return strategy
 
 
 def adapt_prompt_for_persona(base_prompt: str, persona: Dict) -> str:
     """
-    Adapt a prompt based on persona characteristics.
+    NOTE: This function is intentionally minimal.
     
-    E.g., for low-tech users, make prompts more explicit about looking for obvious elements.
-    For high-tech users, look for efficiency and advanced features.
+    Nova Act should NOT reason about personas - it just executes browser tasks.
+    The Claude agent interprets results in the context of the persona afterward.
+    
+    We keep prompts simple and direct. The agent decides:
+    - WHAT to test (based on persona goals)
+    - HOW to interpret results (based on persona characteristics)
+    
+    Nova Act just:
+    - Clicks, types, scrolls
+    - Reports what it sees
     """
-    tech_level = persona.get('tech_proficiency', 'medium')
-    archetype = persona.get('archetype', 'user')
-    
-    # Low-tech users: emphasize obvious, large, clearly labeled elements
-    if tech_level == "low":
-        if "link" in base_prompt.lower():
-            return base_prompt.replace("link", "clearly labeled link or button")
-        if "find" in base_prompt.lower():
-            return base_prompt.replace("find", "easily find")
-    
-    # High-tech users: look for shortcuts and advanced features
-    elif tech_level == "high":
-        if "documentation" in base_prompt.lower():
-            return base_prompt + " Also note if there are keyboard shortcuts or advanced search features."
-    
-    # Business users: emphasize clarity and trust signals
-    if archetype == "business_professional":
-        if "pricing" in base_prompt.lower():
-            return base_prompt + " Note if there are enterprise options or 'contact sales' mentions."
-    
+    # Return prompt unchanged - no persona-specific modifications
+    # Persona context is used by the agent when interpreting results, not by Nova Act
     return base_prompt
 
 

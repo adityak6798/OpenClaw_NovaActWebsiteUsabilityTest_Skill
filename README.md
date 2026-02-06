@@ -1,56 +1,126 @@
-# Nova Act Usability Testing Skill
+# Nova Act Usability Testing Skill v2.0.0
 
 AI-orchestrated usability testing for websites using Amazon Nova Act browser automation.
 
+## What's New in v2.0.0
+
+🎯 **Agent-Driven Interpretation**: The script collects raw data, the AI agent (you) interprets responses and generates reports. No hardcoded regex, no extra API calls.
+
+📊 **Three-Phase Flow**:
+1. **Collect** - Script runs Nova Act, captures raw responses
+2. **Interpret** - Agent reads JSON, determines goal achievement
+3. **Report** - Agent generates HTML with accurate pass/fail status
+
+See [RELEASE_NOTES_2.0.0.md](RELEASE_NOTES_2.0.0.md) for full details.
+
 ## What It Does
 
+- **Workflow Testing**: Tests complete user journeys (booking flights, checkout, posting) with safety guardrails
 - **Adaptive Testing**: AI-driven browser automation that explores websites like a real user
+- **Safety First**: Automatically stops before material impact (payment, posting, account creation)
 - **Contextual Personas**: Analyzes your site and generates relevant user personas automatically
-- **Realistic Test Cases**: Creates targeted test scenarios based on what your page actually offers
-- **Iterative Exploration**: Tries multiple approaches per test (Nova Act requires exact text matching)
+- **Realistic Test Cases**: Creates targeted test scenarios based on what your page actually offers (including full workflows)
+- **Cookbook-Guided**: Loads best practices and safety guidelines automatically at test start
 - **Comprehensive Reports**: Auto-generates HTML reports with detailed findings and session trace links
 
 ## Features
 
+✅ **Workflow Testing** - Tests complete user journeys end-to-end (booking, checkout, posting, signup)  
+✅ **Safety Guardrails** - Automatically stops before payment, posting, or account creation  
 ✅ **Real Browser Automation** - Actual Playwright browser control via Nova Act  
-✅ **Fully Dynamic Testing** - Exploration strategies and prompts generated per website/persona (no hardcoded logic!)  
+✅ **Cookbook Integration** - Loads best practices and workflow patterns automatically  
+✅ **Fully Dynamic Testing** - Exploration strategies generated per website/persona (no hardcoded logic!)  
 ✅ **Smart Persona Generation** - Analyzes page content to create relevant user types  
 ✅ **Adaptive Testing** - AI tries multiple variations when element text doesn't match exactly  
 ✅ **Robust Error Handling** - Handles scroll loops, timeouts, and Nova Act failures gracefully  
 ✅ **Detailed Reporting** - Professional HTML reports with step-by-step observations  
-✅ **Trace File Integration** - Links to Nova Act's HTML session recordings for replay  
+✅ **Trace File Integration** - Links to Nova Act's HTML session recordings for replay
 
-## Requirements
+### Supported Workflows
 
-- **Amazon Nova Act SDK** (`pip install nova-act`)
-- **Playwright browsers** (`playwright install chromium`)
-- **Nova Act API key** from AWS Console
+**E-Commerce:**
+- Product search → Add to cart → Checkout → **STOP before payment**
+
+**Booking (Flights/Hotels):**
+- Search → Select → Fill details → **STOP before booking**
+
+**Social Media:**
+- Create post → Add content → **STOP before publishing**
+
+**Account Signup:**
+- Fill registration form → **STOP before final submission**
+
+**Form Submission:**
+- Fill form fields → **STOP before submit**
+
+### Safety Guarantees
+
+The skill will **NEVER:**
+- ❌ Complete actual purchases
+- ❌ Create real accounts
+- ❌ Post publicly
+- ❌ Send emails/messages
+- ❌ Subscribe to newsletters
+
+The skill will **ALWAYS:**
+- ✅ Test up to (but not including) final action
+- ✅ Verify final button exists and is accessible
+- ✅ Document safety stop in observations  
 
 ## Installation
 
+### Automatic Setup (Recommended)
+
+The skill includes an automatic setup script that handles all dependencies:
+
 ```bash
-# Option 1: Install via OpenClaw CLI (recommended)
-openclaw skill install nova-act-usability
+# Navigate to skill directory
+cd ~/.openclaw/skills/nova-act-usability
 
-# Option 2: Manual installation to OpenClaw skills directory
-mkdir -p ~/.openclaw/skills
-tar -xzf nova-act-usability.tar.gz -C ~/.openclaw/skills/
-
-# Option 3: Extract to current workspace
-tar -xzf nova-act-usability.tar.gz
+# Run setup
+./setup.sh
 ```
 
-## Configuration
+**The setup script will:**
+1. ✅ Install Python packages (nova-act, pydantic, playwright)
+2. ✅ Download Playwright browsers (~300MB, may take a few minutes)
+3. ✅ Create config file template at `~/.openclaw/config/nova-act.json`
+4. ✅ Verify installation
+5. ℹ️  Provide instructions for any manual steps needed
 
-Create `~/.openclaw/config/nova-act.json`:
+**After setup:**
+1. Get your Nova Act API key from [AWS Console](https://console.aws.amazon.com/)
+2. Edit `~/.openclaw/config/nova-act.json`
+3. Replace `"your-nova-act-api-key-here"` with your actual key
 
-```json
+### Manual Installation (If Automatic Fails)
+
+If the automatic setup has issues, install manually:
+
+```bash
+# 1. Install Python packages
+pip3 install nova-act pydantic playwright
+
+# 2. Install Playwright browsers
+playwright install chromium
+
+# 3. (Optional) Install system dependencies on Linux
+sudo playwright install-deps chromium
+
+# 4. Create config file
+mkdir -p ~/.openclaw/config
+cat > ~/.openclaw/config/nova-act.json << EOF
 {
   "apiKey": "your-nova-act-api-key-here"
 }
+EOF
 ```
 
-Get your API key from the [AWS Console](https://console.aws.amazon.com/).
+### Requirements
+
+- **Python 3.8+** (Python 3.12+ recommended)
+- **~300MB disk space** for Playwright browser
+- **Nova Act API key** from [AWS Console](https://console.aws.amazon.com/)
 
 ## Usage
 
@@ -81,15 +151,32 @@ The agent will:
 - Links to Nova Act HTML trace files for session replay
 - Recommendations for improvements
 
-## How It Works
+## How It Works (v2.0.0 Architecture)
 
+### Phase 1: Data Collection (Script)
 1. **Page Analysis**: Captures title, navigation, key elements
-2. **Persona Generation**: Creates 3 contextual user types based on page content
-3. **Test Case Creation**: Generates top 3 realistic tasks per persona
-4. **Dynamic Exploration**: AI generates exploration strategy (what questions to ask, what actions to take) - fully contextual, no hardcoded prompts!
-5. **Adaptive Execution**: Tries multiple prompt variations when first approach fails
-6. **Robust Error Handling**: Detects scroll loops, handles timeouts, continues testing even if steps fail
-7. **Report Generation**: Auto-creates comprehensive HTML report with trace links
+2. **Persona Generation**: Creates contextual user types based on page content
+3. **Test Case Creation**: Generates realistic tasks per persona
+4. **Browser Automation**: Nova Act executes simple browser commands
+5. **Raw Data Capture**: Saves responses with `needs_agent_analysis: true`
+
+### Phase 2: Agent Interpretation (You)
+6. **Read JSON Results**: Load `test_results_adaptive.json`
+7. **Interpret Responses**: For each step, determine if `raw_response` indicates success
+8. **Set Goal Achievement**: Mark `goal_achieved: true/false` on each step
+9. **Calculate Success**: Set `overall_success` based on goals achieved
+
+### Phase 3: Report Generation (Agent)
+10. **Call Report Generator**: Pass interpreted results to `generate_enhanced_report()`
+11. **View Report**: HTML shows ✅ PASSED / ❌ FAILED / ⏳ PENDING
+
+### Report Status Indicators
+
+| Status | Meaning |
+|--------|---------|
+| ✅ PASSED | Agent interpreted, goals achieved |
+| ❌ FAILED | Agent interpreted, goals not achieved |
+| ⏳ PENDING | Awaiting agent interpretation |
 
 ### Why "Dynamic"?
 
