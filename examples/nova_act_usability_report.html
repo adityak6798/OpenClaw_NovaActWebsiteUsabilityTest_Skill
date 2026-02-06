@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Act Usability Test Report</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+        
+        h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .page-analysis {
+            background: #e8f4f8;
+            padding: 25px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .page-analysis h3 {
+            margin-top: 0;
+            color: #2980b9;
+        }
+        
+        .page-analysis ul {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+        
+        .executive-summary {
+            background: #ecf0f1;
+            padding: 25px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .executive-summary p {
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+        
+        .executive-summary strong {
+            color: #2c3e50;
+        }
+        
+        .persona-section {
+            background: #fff;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 25px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        }
+        
+        .persona-section h3 {
+            color: #3498db;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-case {
+            background: #f8f9fa;
+            border-left: 4px solid #95a5a6;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .test-case.success {
+            border-left-color: #2ecc71;
+            background: #eafaf1;
+        }
+        
+        .test-case.failure {
+            border-left-color: #e74c3c;
+            background: #fadbd8;
+        }
+        
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .test-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .test-status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .test-status.success {
+            background: #2ecc71;
+            color: white;
+        }
+        
+        .test-status.failure {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .test-status.pending {
+            background: #f39c12;
+            color: white;
+        }
+        
+        .test-case.pending {
+            border-left-color: #f39c12;
+            background: #fef9e7;
+        }
+        
+        .observation {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .observation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .step-name {
+            font-weight: 600;
+            color: #34495e;
+        }
+        
+        .step-result {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .step-result.success {
+            background: #d5f4e6;
+            color: #27ae60;
+        }
+        
+        .step-result.failure {
+            background: #fadbd8;
+            color: #c0392b;
+        }
+        
+        .observation-action {
+            color: #555;
+            font-style: italic;
+            margin: 5px 0;
+        }
+        
+        .observation-notes {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            margin-top: 8px;
+            color: #555;
+        }
+        
+        .observation-notes.issue {
+            background: #fff3cd;
+            border-left: 3px solid #ffc107;
+        }
+        
+        .trace-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .trace-link:hover {
+            background: #2980b9;
+        }
+        
+        .insights {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .insights h3 {
+            margin-top: 0;
+            color: #f39c12;
+        }
+        
+        .insight-item {
+            margin: 10px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .insight-item:before {
+            content: "💡";
+            position: absolute;
+            left: 0;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .metric {
+            display: inline-block;
+            margin: 0 15px;
+            font-size: 1.1em;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            color: #3498db;
+            font-size: 1.3em;
+        }
+        
+        details {
+            margin: 15px 0;
+        }
+        
+        summary {
+            cursor: pointer;
+            font-weight: 600;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            user-select: none;
+        }
+        
+        summary:hover {
+            background: #e9ecef;
+        }
+        .partial-warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .partial-warning h2 {
+            color: #856404;
+            margin: 0 0 10px 0;
+            border: none;
+            font-size: 1.5em;
+        }
+        
+        .partial-warning p {
+            color: #856404;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦅 Nova Act Usability Test Report</h1>
+
+        <div class="page-analysis">
+            <h3>📄 Page Analysis: PGA Tour</h3>
+            <p><strong>Purpose:</strong> Golf news, scores, and tournament coverage</p>
+            <p><strong>Navigation:</strong> Leaderboard, Watch & Listen, News, FedExCup, Schedule, Players, Stats</p>
+
+            <p><strong>Site Category:</strong> Sports/Tournament Content</p>
+            <p><strong>Key Features:</strong></p>
+            <ul>
+                <li>Leaderboard/Standings: ✅ Found in navigation</li>
+                <li>Schedule/Calendar: ✅ Found in navigation</li>
+                <li>Player/Team Stats: ✅ Found in navigation</li>
+                <li>Live Scores/Updates: ✅ Content suggests live coverage</li>
+            </ul>
+
+        </div>
+        
+        <div class="executive-summary">
+            <h2>Executive Summary</h2>
+            <p><strong>Test Date:</strong> 2026-02-06 10:06:23</p>
+            <p><strong>Tests Conducted:</strong> 4</p>
+            <p>
+                <span class="metric">
+                    <span class="metric-value">4</span> Passed
+                </span>
+                <span class="metric">
+                    <span class="metric-value">0</span> Failed
+                </span>
+                <span class="metric">
+                    <span class="metric-value">100.0%</span> Success Rate
+                </span>
+            </p>
+            <p><strong>Personas Tested:</strong> 2</p>
+        </div>
+<h2>Detailed Test Results</h2>
+
+        <div class="persona-section">
+            <h3>
+                <span>Marcus Chen</span>
+                <span style="font-size: 0.8em; color: #7f8c8d;">(tournament_follower - high proficiency)</span>
+            </h3>
+            <p><strong>Success Rate:</strong> 2/2 (100.0%)</p>
+        
+            <div class="test-case success">
+                <div class="test-header">
+                    <div class="test-title">Check current tournament leaderboard</div>
+                    <div class="test-status success">✅ PASSED</div>
+                </div>
+                <p><strong>Completion:</strong> complete</p>
+                
+                <details open>
+                    <summary>Step-by-Step Observations (2 steps)</summary>
+            
+                <div class="observation">
+                    <div class="observation-header">
+                        <span class="step-name">Step 1: List the main navigation menu items visible on this page</span>
+                        <span class="step-result success">✓</span>
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em; margin: 5px 0;">Expected: Identify available navigation options</div>
+                    <div class="observation-notes ">
+                        <strong>Observation:</strong> Response: Leaderboard, Watch & Listen, News, FedExCup, Schedule, Players, Stats, Fantasy & Betting, Signature Events, More
+                    </div>
+                    
+                </div>
+                
+                <div class="observation">
+                    <div class="observation-header">
+                        <span class="step-name">Step 2: Is there a link or button related to: Check current...</span>
+                        <span class="step-result success">✓</span>
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em; margin: 5px 0;">Expected: Find relevant element</div>
+                    <div class="observation-notes ">
+                        <strong>Observation:</strong> Response: Yes
+                    </div>
+                    
+                </div>
+                
+                </details>
+                
+            
+                <div style="margin-top: 15px; padding: 15px; background: #e3f2fd; border-radius: 4px;">
+                    <strong>🔍 Nova Act Session Recordings (3):</strong>
+                    <div style="margin-top: 10px;">
+                
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3418-6ddb-77f2-bd0d-10f759fd6edb/act_019c3418-87a6-7484-ac71-1598c5ee59c7_List_the_main_navigation_menu_.html" class="trace-link" target="_blank">
+                                📹 Recording 1: act_019c3418-87a6-7484-ac71-1598c5ee59c7_List_the_main_navigation_menu_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3418-6ddb-77f2-bd0d-10f759fd6edb/act_019c3418-87a6-7484-ac71-1598c5ee59c7_List_the_main_navigation_menu_.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3418-6ddb-77f2-bd0d-10f759fd6edb/act_019c3418-b1d0-7435-b112-f72bb64d49ed_Is_there_a_link_or_button_rela.html" class="trace-link" target="_blank">
+                                📹 Recording 2: act_019c3418-b1d0-7435-b112-f72bb64d49ed_Is_there_a_link_or_button_rela.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3418-6ddb-77f2-bd0d-10f759fd6edb/act_019c3418-b1d0-7435-b112-f72bb64d49ed_Is_there_a_link_or_button_rela.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3418-6ddb-77f2-bd0d-10f759fd6edb/act_019c3419-2200-7e63-85f8-32ca4880e4a3_Check_the_navigation_menu_for_.html" class="trace-link" target="_blank">
+                                📹 Recording 3: act_019c3419-2200-7e63-85f8-32ca4880e4a3_Check_the_navigation_menu_for_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3418-6ddb-77f2-bd0d-10f759fd6edb/act_019c3419-2200-7e63-85f8-32ca4880e4a3_Check_the_navigation_menu_for_.html)
+                            </span>
+                        </div>
+                    
+                    </div>
+                    <p style="margin-top: 10px; font-size: 0.9em; color: #555;">
+                        <em>Click to view detailed Nova Act trace showing every action, screenshot, and AI decision</em>
+                    </p>
+                </div>
+                </div>
+
+            <div class="test-case success">
+                <div class="test-header">
+                    <div class="test-title">Find a specific player's stats</div>
+                    <div class="test-status success">✅ PASSED</div>
+                </div>
+                <p><strong>Completion:</strong> complete</p>
+                
+                <details open>
+                    <summary>Step-by-Step Observations (2 steps)</summary>
+            
+                <div class="observation">
+                    <div class="observation-header">
+                        <span class="step-name">Step 1: List the main navigation menu items visible on this page</span>
+                        <span class="step-result success">✓</span>
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em; margin: 5px 0;">Expected: Identify available navigation options</div>
+                    <div class="observation-notes ">
+                        <strong>Observation:</strong> Response: Leaderboard, Watch & Listen, News, FedExCup, Schedule, Players, Stats, Fantasy & Betting, Signature Events, More
+                    </div>
+                    
+                </div>
+                
+                <div class="observation">
+                    <div class="observation-header">
+                        <span class="step-name">Step 2: Is there a link or button related to: Find a specific...</span>
+                        <span class="step-result failure">✗</span>
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em; margin: 5px 0;">Expected: Find relevant element</div>
+                    <div class="observation-notes ">
+                        <strong>Observation:</strong> Response: No
+                    </div>
+                    
+                </div>
+                
+                </details>
+                
+            
+                <div style="margin-top: 15px; padding: 15px; background: #e3f2fd; border-radius: 4px;">
+                    <strong>🔍 Nova Act Session Recordings (5):</strong>
+                    <div style="margin-top: 10px;">
+                
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c3419-7174-7e09-b735-2d07147aff91_List_the_main_navigation_menu_.html" class="trace-link" target="_blank">
+                                📹 Recording 4: act_019c3419-7174-7e09-b735-2d07147aff91_List_the_main_navigation_menu_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c3419-7174-7e09-b735-2d07147aff91_List_the_main_navigation_menu_.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-188a-7c02-8728-518e2f3d5ed6_Look_in_the_main_content_area_.html" class="trace-link" target="_blank">
+                                📹 Recording 5: act_019c341a-188a-7c02-8728-518e2f3d5ed6_Look_in_the_main_content_area_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-188a-7c02-8728-518e2f3d5ed6_Look_in_the_main_content_area_.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-3876-72a8-a7d2-50ec460aec3d_Is_there_a_link_or_button_rela.html" class="trace-link" target="_blank">
+                                📹 Recording 6: act_019c341a-3876-72a8-a7d2-50ec460aec3d_Is_there_a_link_or_button_rela.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-3876-72a8-a7d2-50ec460aec3d_Is_there_a_link_or_button_rela.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-ac53-7eb4-90bb-82e7fdf53ea6_Check_the_navigation_menu_for_.html" class="trace-link" target="_blank">
+                                📹 Recording 7: act_019c341a-ac53-7eb4-90bb-82e7fdf53ea6_Check_the_navigation_menu_for_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-ac53-7eb4-90bb-82e7fdf53ea6_Check_the_navigation_menu_for_.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-c584-78fc-82c6-2dd5e3ff7dc7_Scroll_down_the_page_and_look_.html" class="trace-link" target="_blank">
+                                📹 Recording 8: act_019c341a-c584-78fc-82c6-2dd5e3ff7dc7_Scroll_down_the_page_and_look_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-c584-78fc-82c6-2dd5e3ff7dc7_Scroll_down_the_page_and_look_.html)
+                            </span>
+                        </div>
+                    
+                    </div>
+                    <p style="margin-top: 10px; font-size: 0.9em; color: #555;">
+                        <em>Click to view detailed Nova Act trace showing every action, screenshot, and AI decision</em>
+                    </p>
+                </div>
+                </div>
+</div>
+
+        <div class="persona-section">
+            <h3>
+                <span>Dorothy Williams</span>
+                <span style="font-size: 0.8em; color: #7f8c8d;">(casual_viewer - low proficiency)</span>
+            </h3>
+            <p><strong>Success Rate:</strong> 2/2 (100.0%)</p>
+        
+            <div class="test-case success">
+                <div class="test-header">
+                    <div class="test-title">Find out who won recently</div>
+                    <div class="test-status success">✅ PASSED</div>
+                </div>
+                <p><strong>Completion:</strong> complete</p>
+                
+                <details open>
+                    <summary>Step-by-Step Observations (2 steps)</summary>
+            
+                <div class="observation">
+                    <div class="observation-header">
+                        <span class="step-name">Step 1: List the main navigation menu items visible on this page</span>
+                        <span class="step-result success">✓</span>
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em; margin: 5px 0;">Expected: Identify available navigation options</div>
+                    <div class="observation-notes ">
+                        <strong>Observation:</strong> Response: Leaderboard, Watch & Listen, News, FedExCup, Schedule, Players, Stats, Fantasy & Betting, Signature Events, More, Tours
+                    </div>
+                    
+                </div>
+                
+                <div class="observation">
+                    <div class="observation-header">
+                        <span class="step-name">Step 2: Is there a link or button related to: Find out who won...</span>
+                        <span class="step-result failure">✗</span>
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em; margin: 5px 0;">Expected: Find relevant element</div>
+                    <div class="observation-notes ">
+                        <strong>Observation:</strong> Response: No
+                    </div>
+                    
+                </div>
+                
+                </details>
+                
+            
+                <div style="margin-top: 15px; padding: 15px; background: #e3f2fd; border-radius: 4px;">
+                    <strong>🔍 Nova Act Session Recordings (4):</strong>
+                    <div style="margin-top: 10px;">
+                
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341b-52b8-7a5c-a683-e62a5235a060_List_the_main_navigation_menu_.html" class="trace-link" target="_blank">
+                                📹 Recording 9: act_019c341b-52b8-7a5c-a683-e62a5235a060_List_the_main_navigation_menu_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341b-52b8-7a5c-a683-e62a5235a060_List_the_main_navigation_menu_.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341b-74a9-79a0-83dd-4d85fc285810_Is_there_a_link_or_button_rela.html" class="trace-link" target="_blank">
+                                📹 Recording 10: act_019c341b-74a9-79a0-83dd-4d85fc285810_Is_there_a_link_or_button_rela.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341b-74a9-79a0-83dd-4d85fc285810_Is_there_a_link_or_button_rela.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341c-0329-7e31-9269-eea55159419c_Check_the_navigation_menu_for_.html" class="trace-link" target="_blank">
+                                📹 Recording 11: act_019c341c-0329-7e31-9269-eea55159419c_Check_the_navigation_menu_for_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341c-0329-7e31-9269-eea55159419c_Check_the_navigation_menu_for_.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341c-2210-70b5-ad72-10d2203ade5d_Scroll_down_the_page_and_look_.html" class="trace-link" target="_blank">
+                                📹 Recording 12: act_019c341c-2210-70b5-ad72-10d2203ade5d_Scroll_down_the_page_and_look_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341c-2210-70b5-ad72-10d2203ade5d_Scroll_down_the_page_and_look_.html)
+                            </span>
+                        </div>
+                    
+                    </div>
+                    <p style="margin-top: 10px; font-size: 0.9em; color: #555;">
+                        <em>Click to view detailed Nova Act trace showing every action, screenshot, and AI decision</em>
+                    </p>
+                </div>
+                </div>
+
+            <div class="test-case success">
+                <div class="test-header">
+                    <div class="test-title">Learn how to watch golf online</div>
+                    <div class="test-status success">✅ PASSED</div>
+                </div>
+                <p><strong>Completion:</strong> partial</p>
+                
+                <details open>
+                    <summary>Step-by-Step Observations (2 steps)</summary>
+            
+                <div class="observation">
+                    <div class="observation-header">
+                        <span class="step-name">Step 1: List the main navigation menu items visible on this page</span>
+                        <span class="step-result success">✓</span>
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em; margin: 5px 0;">Expected: Identify available navigation options</div>
+                    <div class="observation-notes ">
+                        <strong>Observation:</strong> Response: Leaderboard, Watch & Listen, News, FedExCup, Schedule, Players, Stats, Fantasy & Betting, Signature Events, More
+                    </div>
+                    
+                </div>
+                
+                <div class="observation">
+                    <div class="observation-header">
+                        <span class="step-name">Step 2: Is there a link or button related to: Learn how to watch...</span>
+                        <span class="step-result failure">✗</span>
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em; margin: 5px 0;">Expected: Find relevant element</div>
+                    <div class="observation-notes issue">
+                        <strong>⚠️ Observation:</strong> Error: Query took 40.0s (possible hang)
+                    </div>
+                    
+                </div>
+                
+                </details>
+                
+            
+                <div style="margin-top: 15px; padding: 15px; background: #e3f2fd; border-radius: 4px;">
+                    <strong>🔍 Nova Act Session Recordings (4):</strong>
+                    <div style="margin-top: 10px;">
+                
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c341d-663d-7f88-86d8-5ac87d5c5feb_List_the_main_navigation_menu_.html" class="trace-link" target="_blank">
+                                📹 Recording 13: act_019c341d-663d-7f88-86d8-5ac87d5c5feb_List_the_main_navigation_menu_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c341d-663d-7f88-86d8-5ac87d5c5feb_List_the_main_navigation_menu_.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c341d-8340-7158-9131-9194b02f3a5d_Is_there_a_link_or_button_rela.html" class="trace-link" target="_blank">
+                                📹 Recording 14: act_019c341d-8340-7158-9131-9194b02f3a5d_Is_there_a_link_or_button_rela.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c341d-8340-7158-9131-9194b02f3a5d_Is_there_a_link_or_button_rela.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c341f-1725-728a-98bd-39313e80bd6f_Check_the_navigation_menu_for_.html" class="trace-link" target="_blank">
+                                📹 Recording 15: act_019c341f-1725-728a-98bd-39313e80bd6f_Check_the_navigation_menu_for_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c341f-1725-728a-98bd-39313e80bd6f_Check_the_navigation_menu_for_.html)
+                            </span>
+                        </div>
+                    
+                        <div style="margin: 5px 0;">
+                            <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c3421-25cd-72c2-92de-5e5eab06a40e_Scroll_down_the_page_and_look_.html" class="trace-link" target="_blank">
+                                📹 Recording 16: act_019c3421-25cd-72c2-92de-5e5eab06a40e_Scroll_down_the_page_and_look_.html
+                            </a>
+                            <span style="font-size: 0.85em; color: #666; margin-left: 10px;">
+                                (file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c3421-25cd-72c2-92de-5e5eab06a40e_Scroll_down_the_page_and_look_.html)
+                            </span>
+                        </div>
+                    
+                    </div>
+                    <p style="margin-top: 10px; font-size: 0.9em; color: #555;">
+                        <em>Click to view detailed Nova Act trace showing every action, screenshot, and AI decision</em>
+                    </p>
+                </div>
+                </div>
+</div>
+
+        <div class="insights">
+            <h3>🔍 Key Insights</h3>
+    <h4>What Worked Well:</h4>
+<div class="insight-item">Check current tournament leaderboard - Complete (2 steps)</div>
+<div class="insight-item">Find a specific player's stats - Complete (2 steps)</div>
+<div class="insight-item">Find out who won recently - Complete (2 steps)</div>
+</div>
+
+        <div class="insights" style="background: #e3f2fd; border-left-color: #2196f3;">
+            <h3>🎬 Session Recordings</h3>
+            <p style="margin-bottom: 15px;">Nova Act recorded detailed traces for each test session. Click to view step-by-step actions, screenshots, and AI decisions.</p>
+        
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3418-6ddb-77f2-bd0d-10f759fd6edb/act_019c3418-87a6-7484-ac71-1598c5ee59c7_List_the_main_navigation_menu_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c3418-87a6-7484-ac71-1598c5ee59c7_List_the_main_navigation_menu_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c3418-6ddb-77f2-bd0d-10f759fd6edb
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3418-6ddb-77f2-bd0d-10f759fd6edb/act_019c3418-b1d0-7435-b112-f72bb64d49ed_Is_there_a_link_or_button_rela.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c3418-b1d0-7435-b112-f72bb64d49ed_Is_there_a_link_or_button_rela.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c3418-6ddb-77f2-bd0d-10f759fd6edb
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3418-6ddb-77f2-bd0d-10f759fd6edb/act_019c3419-2200-7e63-85f8-32ca4880e4a3_Check_the_navigation_menu_for_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c3419-2200-7e63-85f8-32ca4880e4a3_Check_the_navigation_menu_for_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c3418-6ddb-77f2-bd0d-10f759fd6edb
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c3419-7174-7e09-b735-2d07147aff91_List_the_main_navigation_menu_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c3419-7174-7e09-b735-2d07147aff91_List_the_main_navigation_menu_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c3419-5692-7a74-b9ea-79f4128f2e90
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-188a-7c02-8728-518e2f3d5ed6_Look_in_the_main_content_area_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341a-188a-7c02-8728-518e2f3d5ed6_Look_in_the_main_content_area_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c3419-5692-7a74-b9ea-79f4128f2e90
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-3876-72a8-a7d2-50ec460aec3d_Is_there_a_link_or_button_rela.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341a-3876-72a8-a7d2-50ec460aec3d_Is_there_a_link_or_button_rela.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c3419-5692-7a74-b9ea-79f4128f2e90
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-ac53-7eb4-90bb-82e7fdf53ea6_Check_the_navigation_menu_for_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341a-ac53-7eb4-90bb-82e7fdf53ea6_Check_the_navigation_menu_for_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c3419-5692-7a74-b9ea-79f4128f2e90
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c3419-5692-7a74-b9ea-79f4128f2e90/act_019c341a-c584-78fc-82c6-2dd5e3ff7dc7_Scroll_down_the_page_and_look_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341a-c584-78fc-82c6-2dd5e3ff7dc7_Scroll_down_the_page_and_look_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c3419-5692-7a74-b9ea-79f4128f2e90
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341b-52b8-7a5c-a683-e62a5235a060_List_the_main_navigation_menu_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341b-52b8-7a5c-a683-e62a5235a060_List_the_main_navigation_menu_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c341b-3701-7175-921f-17db26a8288e
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341b-74a9-79a0-83dd-4d85fc285810_Is_there_a_link_or_button_rela.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341b-74a9-79a0-83dd-4d85fc285810_Is_there_a_link_or_button_rela.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c341b-3701-7175-921f-17db26a8288e
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341c-0329-7e31-9269-eea55159419c_Check_the_navigation_menu_for_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341c-0329-7e31-9269-eea55159419c_Check_the_navigation_menu_for_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c341b-3701-7175-921f-17db26a8288e
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341b-3701-7175-921f-17db26a8288e/act_019c341c-2210-70b5-ad72-10d2203ade5d_Scroll_down_the_page_and_look_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341c-2210-70b5-ad72-10d2203ade5d_Scroll_down_the_page_and_look_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c341b-3701-7175-921f-17db26a8288e
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c341d-663d-7f88-86d8-5ac87d5c5feb_List_the_main_navigation_menu_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341d-663d-7f88-86d8-5ac87d5c5feb_List_the_main_navigation_menu_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c341d-4ad6-7298-8e6c-3073d405562f
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c341d-8340-7158-9131-9194b02f3a5d_Is_there_a_link_or_button_rela.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341d-8340-7158-9131-9194b02f3a5d_Is_there_a_link_or_button_rela.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c341d-4ad6-7298-8e6c-3073d405562f
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c341f-1725-728a-98bd-39313e80bd6f_Check_the_navigation_menu_for_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c341f-1725-728a-98bd-39313e80bd6f_Check_the_navigation_menu_for_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c341d-4ad6-7298-8e6c-3073d405562f
+                </div>
+            </div>
+            
+            <div style="margin: 8px 0; padding: 10px; background: white; border-radius: 4px;">
+                <a href="file://wsl$/Ubuntu/home/adity/.openclaw/workspace/nova_act_logs/019c341d-4ad6-7298-8e6c-3073d405562f/act_019c3421-25cd-72c2-92de-5e5eab06a40e_Scroll_down_the_page_and_look_.html" class="trace-link" target="_blank" style="text-decoration: none;">
+                    📹 act_019c3421-25cd-72c2-92de-5e5eab06a40e_Scroll_down_the_page_and_look_.html
+                </a>
+                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                    Session: 019c341d-4ad6-7298-8e6c-3073d405562f
+                </div>
+            </div>
+            </div>
+
+        <div class="footer">
+            <p>Generated by Nova Act Usability Testing Suite | Powered by OpenClaw</p>
+            <p>Report generated: 2026-02-06 10:06:23</p>
+        </div>
+    </div>
+</body>
+</html>
